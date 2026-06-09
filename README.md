@@ -59,17 +59,31 @@ npm install
 
 CallQuarry includes a browser workbench in `index.html`.
 
-Run it locally:
+Run it on your own computer:
 
 ```bash
 npm run site
 ```
 
-Open:
+Then open:
 
 ```text
 http://127.0.0.1:4173/
 ```
+
+Run it on the VPS so other devices can open it with the VPS IP:
+
+```bash
+python3 -m http.server 4173 --bind 0.0.0.0
+```
+
+Then open:
+
+```text
+http://161.97.107.130:4173/
+```
+
+Use `127.0.0.1` only when you are browsing from the same machine that is running the server. Use `161.97.107.130` when opening the site from your phone, laptop, or DoraHacks reviewers.
 
 The website can:
 
