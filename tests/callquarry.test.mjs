@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  runWalletProof,
   runValidation,
   validateJsonSchemaValue,
   validateManifestShape
@@ -138,5 +139,87 @@ describe('CallQuarry validation engine', () => {
     assert.ok(report.checks.find((check) => check.id === 'network.pharos-atlantic-testnet.chainId' && check.status === 'pass'));
     assert.ok(report.checks.find((check) => check.id === 'read.pharos-mainnet.zero-balance' && check.status === 'pass'));
     assert.ok(report.checks.find((check) => check.id === 'read.pharos-atlantic-testnet.zero-balance' && check.status === 'pass'));
+  });
+
+  it('refuses wallet proof without a private key env var', async () => {
+    const report = await runWalletProof({
+      networks: [
+        { id: 'pharos-atlantic-testnet', name: 'Atlantic', environment: 'testnet', chainId: 688689, rpcUrl: 'mock://atlantic' }
+      ],
+      networkSelector: 'pharos-atlantic-testnet',
+      privateKeyEnv: 'MISSING_PRIVATE_KEY',
+      env: {},
+      proofAdapter: async () => {
+        throw new Error('proof adapter should not run');
+      }
+    });
+
+    assert.equal(report.summary.failed, 1);
+    assert.ok(report.checks.find((check) => check.id === 'wallet.privateKey.present' && check.status === 'fail'));
+  });
+
+  it('refuses mainnet wallet proof unless mainnet is explicitly allowed', async () => {
+    const report = await runWalletProof({
+      networks: [
+        { id: 'pharos-mainnet', name: 'Mainnet', environment: 'mainnet', chainId: 1672, rpcUrl: 'mock://mainnet' }
+      ],
+      networkSelector: 'pharos-mainnet',
+      privateKeyEnv: 'PHAROS_PRIVATE_KEY',
+      env: {
+        PHAROS_PRIVATE_KEY: '0x1111111111111111111111111111111111111111111111111111111111111111'
+      },
+      proofAdapter: async () => {
+        throw new Error('proof adapter should not run');
+      }
+    });
+
+    assert.equal(report.summary.failed, 1);
+    assert.ok(report.checks.find((check) => check.id === 'wallet.mainnet.guard' && check.status === 'fail'));
+  });
+
+  it('runs dry wallet proof with a mock adapter without broadcasting', async () => {
+    const report = await runWalletProof({
+      networks: [
+        { id: 'pharos-atlantic-testnet', name: 'Atlantic', environment: 'testnet', chainId: 688689, rpcUrl: 'mock://atlantic' }
+      ],
+      networkSelector: 'pharos-atlantic-testnet',
+      privateKeyEnv: 'PHAROS_PRIVATE_KEY',
+      env: {
+        PHAROS_PRIVATE_KEY: '0x1111111111111111111111111111111111111111111111111111111111111111'
+      },
+      proofAdapter: async ({ network, broadcast }) => ({
+        address: '0x19E7E376E7C213B7E7E7E46CC70A5DD086DAFF2A',
+        to: '0x19E7E376E7C213B7E7E7E46CC70A5DD086DAFF2A',
+        chainId: network.chainId,
+        balanceBeforeWei: '1000000000000000000',
+        gasEstimate: '21000',
+        signedTransactionHash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        transactionHash: broadcast ? '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' : undefined
+      })
+    });
+
+    assert.equal(report.summary.failed, 0);
+    assert.ok(report.checks.find((check) => check.id === 'wallet.signed' && check.status === 'pass'));
+    assert.ok(report.checks.find((check) => check.id === 'wallet.broadcast' && check.status === 'skip'));
+  });
+
+  it('requires explicit gas-spend consent before broadcasting wallet proof', async () => {
+    const report = await runWalletProof({
+      networks: [
+        { id: 'pharos-atlantic-testnet', name: 'Atlantic', environment: 'testnet', chainId: 688689, rpcUrl: 'mock://atlantic' }
+      ],
+      networkSelector: 'pharos-atlantic-testnet',
+      privateKeyEnv: 'PHAROS_PRIVATE_KEY',
+      env: {
+        PHAROS_PRIVATE_KEY: '0x1111111111111111111111111111111111111111111111111111111111111111'
+      },
+      broadcast: true,
+      proofAdapter: async () => {
+        throw new Error('proof adapter should not run');
+      }
+    });
+
+    assert.equal(report.summary.failed, 1);
+    assert.ok(report.checks.find((check) => check.id === 'wallet.consent' && check.status === 'fail'));
   });
 });

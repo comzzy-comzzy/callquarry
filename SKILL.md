@@ -7,7 +7,7 @@ description: Multi-skill validation harness for Pharos Agent Carnival Skill subm
 
 ## Overview
 
-CallQuarry validates reusable agent Skills before they are used by a production agent or submitted to the Pharos Skill Hackathon. It exposes a deterministic CLI plus a target manifest format so other agents can run the same checks consistently.
+CallQuarry validates reusable agent Skills before they are used by a production agent or submitted to the Pharos Skill Hackathon. It exposes a deterministic CLI plus a target manifest format so other agents can run the same checks consistently, and it includes an opt-in wallet proof mode for testnet execution demos.
 
 ## Quick Start
 
@@ -26,6 +26,12 @@ node scripts/callquarry.mjs validate \
   --out reports/callquarry-report.json
 ```
 
+Run an optional dry wallet proof on Atlantic testnet:
+
+```bash
+PHAROS_PRIVATE_KEY=0x... node scripts/callquarry.mjs prove-wallet --network pharos-atlantic-testnet
+```
+
 ## Core Capabilities
 
 CallQuarry is intentionally a multi-skill module:
@@ -36,7 +42,8 @@ CallQuarry is intentionally a multi-skill module:
 4. **Pharos RPC probing** - verify configured RPC endpoints, chain IDs, block height, and gas price for Pharos Pacific Mainnet and Atlantic Testnet.
 5. **Read-call simulation** - execute declared JSON-RPC read probes such as `eth_getBalance`, `eth_call`, or `eth_blockNumber`.
 6. **Gas dry-run checks** - run `eth_estimateGas` for declared transaction simulations without signing or broadcasting.
-7. **Readiness reporting** - produce a scored JSON or text report that downstream agents can consume.
+7. **Wallet proof mode** - optionally sign a zero-value self-transfer or calldata transaction on Pharos testnet, with broadcast disabled unless explicitly confirmed.
+8. **Readiness reporting** - produce a scored JSON or text report that downstream agents can consume.
 
 ## Workflow
 
@@ -80,6 +87,7 @@ Minimum useful fields:
 - Do not place private keys, seed phrases, bearer tokens, or API keys in a target manifest.
 - Prefer `--offline` for first-pass validation.
 - Treat live checks as read-only: CallQuarry calls public RPC methods and never signs transactions.
+- Use `prove-wallet` only when a user explicitly wants a wallet execution proof. Never ask for a private key in chat; instruct users to set `PHAROS_PRIVATE_KEY` locally.
 - Use `transactionSimulations` only for dry-run gas estimation with `eth_estimateGas`.
 
 ## Bundled Resources

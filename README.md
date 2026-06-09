@@ -14,8 +14,9 @@ It can lint callable schemas, scan prompts for adversarial text, validate sample
 - Pharos Atlantic Testnet RPC compatibility
 - JSON-RPC read probes
 - `eth_estimateGas` dry runs
+- Optional signed wallet proof on Pharos testnet
 
-CallQuarry is read-only by default. It never asks for a private key, never signs transactions, and never broadcasts transactions.
+CallQuarry is read-only by default. The optional wallet proof mode is disabled unless you explicitly run `prove-wallet`.
 
 ## Requirements
 
@@ -38,7 +39,7 @@ Install local package metadata:
 npm install
 ```
 
-There are no runtime npm dependencies.
+The validator path is dependency-light. Wallet proof mode uses `viem` for EVM signing and raw transaction broadcast.
 
 ## Run the Beginner Example
 
@@ -165,6 +166,62 @@ CallQuarry ships with:
 - `pharos-legacy-testnet`: chain ID `688688`, RPC `https://testnet.dplabs-internal.com`
 
 The default live validation uses mainnet and Atlantic testnet.
+
+## Optional Wallet Proof
+
+Use this only when you want to prove that CallQuarry can sign a real Pharos-compatible transaction.
+
+Safety defaults:
+
+- Uses `pharos-atlantic-testnet` by default
+- Does not broadcast unless `--broadcast` is supplied
+- Refuses broadcast unless `--i-understand-this-spends-gas` is supplied
+- Refuses mainnet unless `--allow-mainnet` is supplied
+- Reads the private key only from an environment variable
+- Never prints or stores the private key
+
+Set your private key in your shell. Do not paste it into a manifest, README, command argument, or GitHub issue.
+
+```bash
+export PHAROS_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
+```
+
+Dry proof on Atlantic testnet. This reads balance, estimates gas, and signs locally, but does not broadcast:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet
+```
+
+Real broadcast proof on Atlantic testnet. This sends a zero-value self-transfer and spends only testnet gas:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet \
+  --broadcast \
+  --i-understand-this-spends-gas
+```
+
+Save the proof as JSON:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet \
+  --broadcast \
+  --i-understand-this-spends-gas \
+  --format json \
+  --out reports/wallet-proof.json
+```
+
+Mainnet proof is deliberately harder to run:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-mainnet \
+  --allow-mainnet
+```
+
+Add `--broadcast --i-understand-this-spends-gas` only if you intentionally want a mainnet proof transaction.
 
 ## Test Locally
 

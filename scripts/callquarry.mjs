@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_NETWORK_FILE = resolve(SKILL_ROOT, 'assets', 'networks.json');
@@ -55,6 +55,7 @@ const PROMPT_RISK_PATTERNS = [
 
 const SENSITIVE_KEY_PATTERN = /(private.?key|mnemonic|seed.?phrase|api.?key|secret|bearer|password|token)/i;
 const HEX_PRIVATE_KEY_PATTERN = /^0x[a-fA-F0-9]{64}$/;
+const ZERO_PRIVATE_KEY_PATTERN = /^0x0{64}$/;
 
 export async function readJsonFile(path) {
   const raw = await readFile(path, 'utf8');
@@ -657,6 +658,209 @@ export async function runValidation(options) {
   return finalizeReport(report);
 }
 
+function assertHexData(data) {
+  return typeof data === 'string' && /^0x([a-fA-F0-9]{2})*$/.test(data);
+}
+
+function assertWeiString(value) {
+  try {
+    return BigInt(value) >= 0n;
+  } catch {
+    return false;
+  }
+}
+
+function coerceString(value) {
+  return typeof value === 'bigint' ? value.toString() : String(value);
+}
+
+export async function defaultWalletProofAdapter({
+  network,
+  privateKey,
+  to,
+  valueWei,
+  data,
+  broadcast,
+  confirmations
+}) {
+  const { createPublicClient, http, keccak256 } = await import('viem');
+  const { privateKeyToAccount } = await import('viem/accounts');
+  const account = privateKeyToAccount(privateKey);
+  const address = account.address;
+  const recipient = to ?? address;
+  const chain = {
+    id: network.chainId,
+    name: network.name,
+    nativeCurrency: network.nativeCurrency ?? {
+      name: 'Native Token',
+      symbol: 'NATIVE',
+      decimals: 18
+    },
+    rpcUrls: {
+      default: {
+        http: [network.rpcUrl]
+      }
+    }
+  };
+  const client = createPublicClient({
+    chain,
+    transport: http(network.rpcUrl)
+  });
+  const chainId = await client.getChainId();
+  const request = {
+    account,
+    to: recipient,
+    value: BigInt(valueWei),
+    data
+  };
+  const balanceBefore = await client.getBalance({ address });
+  const gasEstimate = await client.estimateGas(request);
+  const gasPrice = await client.getGasPrice();
+  const nonce = await client.getTransactionCount({ address });
+  const signedTransaction = await account.signTransaction({
+    chainId: network.chainId,
+    to: recipient,
+    value: BigInt(valueWei),
+    data,
+    gas: gasEstimate,
+    gasPrice,
+    nonce
+  });
+  const signedTransactionHash = keccak256(signedTransaction);
+
+  let transactionHash;
+  let receiptStatus;
+  let blockNumber;
+  let balanceAfter;
+  if (broadcast) {
+    transactionHash = await client.sendRawTransaction({ serializedTransaction: signedTransaction });
+    if (confirmations > 0) {
+      const receipt = await client.waitForTransactionReceipt({ hash: transactionHash, confirmations });
+      receiptStatus = receipt.status === 'success' ? 1 : 0;
+      blockNumber = Number(receipt.blockNumber);
+      balanceAfter = await client.getBalance({ address });
+    }
+  }
+
+  return {
+    address,
+    to: recipient,
+    chainId,
+    balanceBeforeWei: coerceString(balanceBefore),
+    balanceAfterWei: balanceAfter === undefined ? undefined : coerceString(balanceAfter),
+    gasEstimate: coerceString(gasEstimate),
+    signedTransactionHash,
+    transactionHash,
+    receiptStatus,
+    blockNumber
+  };
+}
+
+export async function runWalletProof(options) {
+  const report = makeReport('wallet-proof');
+  const networkConfig = options.networks
+    ? { networks: options.networks, defaults: options.defaultNetworkIds ?? ['pharos-atlantic-testnet'] }
+    : await loadNetworkConfig(options.networkFile);
+  const selector = options.networkSelector ?? 'pharos-atlantic-testnet';
+  const { selected, missing } = selectNetworks(networkConfig.networks, networkConfig.defaults, selector);
+
+  for (const missingId of missing) {
+    addCheck(report, 'fail', 'wallet-proof', `wallet.network.${missingId}`, `Network ${missingId} configured`, 'Requested network id is not present in the network config.');
+  }
+
+  if (selected.length !== 1) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.network.count', 'Exactly one network required', 'Signed wallet proof must target exactly one network.');
+    return finalizeReport(report);
+  }
+
+  const network = selected[0];
+  report.target.name = `wallet-proof:${network.id}`;
+  report.target.network = network.id;
+  addCheck(report, 'pass', 'wallet-proof', 'wallet.network.selected', 'Proof network selected', `Selected ${network.name}.`, { network: network.id, chainId: network.chainId });
+
+  const isMainnet = network.environment === 'mainnet' || network.id.includes('mainnet');
+  if (isMainnet && !options.allowMainnet) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.mainnet.guard', 'Mainnet guard active', 'Refusing signed mainnet proof unless --allow-mainnet is supplied.');
+    return finalizeReport(report);
+  }
+  addCheck(report, 'pass', 'wallet-proof', 'wallet.mainnet.guard', 'Mainnet guard checked', isMainnet ? 'Mainnet proof explicitly allowed.' : 'Network is not mainnet.');
+
+  const privateKeyEnv = options.privateKeyEnv ?? 'PHAROS_PRIVATE_KEY';
+  const privateKey = options.env?.[privateKeyEnv] ?? process.env[privateKeyEnv];
+  if (!privateKey) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.privateKey.present', 'Private key env var required', `Set ${privateKeyEnv} in your shell environment. Never commit it.`);
+    return finalizeReport(report);
+  }
+  if (!HEX_PRIVATE_KEY_PATTERN.test(privateKey) || ZERO_PRIVATE_KEY_PATTERN.test(privateKey)) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.privateKey.format', 'Private key format', 'Private key must be a non-zero 0x-prefixed 32-byte hex string.');
+    return finalizeReport(report);
+  }
+  addCheck(report, 'pass', 'wallet-proof', 'wallet.privateKey.format', 'Private key format', `Loaded private key from ${privateKeyEnv}; value is not printed or stored.`);
+
+  const valueWei = options.valueWei ?? '0';
+  if (!assertWeiString(valueWei)) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.valueWei', 'Transaction value', '--value-wei must be a non-negative integer string.');
+    return finalizeReport(report);
+  }
+
+  const data = options.data ?? '0x';
+  if (!assertHexData(data)) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.data', 'Transaction data', '--data must be 0x-prefixed even-length hex bytes.');
+    return finalizeReport(report);
+  }
+
+  const broadcast = Boolean(options.broadcast);
+  if (broadcast && !options.consent) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.consent', 'Broadcast consent required', 'Use --i-understand-this-spends-gas before broadcasting a signed transaction.');
+    return finalizeReport(report);
+  }
+  addCheck(report, 'pass', 'wallet-proof', 'wallet.consent', 'Broadcast mode checked', broadcast ? 'Broadcast consent flag was supplied.' : 'Dry proof mode only; transaction will not be broadcast.');
+
+  const adapter = options.proofAdapter ?? defaultWalletProofAdapter;
+  try {
+    const proof = await adapter({
+      network,
+      privateKey,
+      to: options.to,
+      valueWei,
+      data,
+      broadcast,
+      confirmations: options.confirmations ?? 1,
+      timeoutMs: options.timeoutMs ?? 8000
+    });
+
+    report.target.address = proof.address;
+    const chainMatches = proof.chainId === network.chainId;
+    addCheck(report, chainMatches ? 'pass' : 'fail', 'wallet-proof', 'wallet.chainId', 'RPC chain ID', chainMatches ? `RPC returned expected chain ID ${network.chainId}.` : `RPC returned chain ID ${proof.chainId}, expected ${network.chainId}.`, { chainId: proof.chainId });
+    addCheck(report, 'pass', 'wallet-proof', 'wallet.balance', 'Wallet balance read', 'Wallet balance was read before proof transaction.', { address: proof.address, balanceBeforeWei: proof.balanceBeforeWei });
+    addCheck(report, 'pass', 'wallet-proof', 'wallet.gasEstimate', 'Gas estimate', 'Transaction gas was estimated successfully.', { gasEstimate: proof.gasEstimate });
+    addCheck(report, 'pass', 'wallet-proof', 'wallet.signed', 'Transaction signed', 'Transaction was signed locally; raw signed bytes are not printed.', { signedTransactionHash: proof.signedTransactionHash, from: proof.address, to: proof.to, valueWei });
+
+    if (broadcast) {
+      if (proof.transactionHash) {
+        addCheck(report, 'pass', 'wallet-proof', 'wallet.broadcast', 'Transaction broadcast', 'Signed proof transaction was broadcast.', {
+          transactionHash: proof.transactionHash,
+          explorerUrl: network.explorerUrl ? `${network.explorerUrl.replace(/\/$/, '')}/tx/${proof.transactionHash}` : undefined
+        });
+      } else {
+        addCheck(report, 'fail', 'wallet-proof', 'wallet.broadcast', 'Transaction broadcast', 'Proof adapter did not return a transaction hash.');
+      }
+
+      if (proof.receiptStatus === undefined) {
+        addCheck(report, 'warn', 'wallet-proof', 'wallet.receipt', 'Transaction receipt', 'Broadcast completed, but receipt waiting was disabled or unavailable.');
+      } else {
+        addCheck(report, proof.receiptStatus === 1 ? 'pass' : 'fail', 'wallet-proof', 'wallet.receipt', 'Transaction receipt', proof.receiptStatus === 1 ? 'Proof transaction confirmed successfully.' : 'Proof transaction receipt reported failure.', { blockNumber: proof.blockNumber, balanceAfterWei: proof.balanceAfterWei });
+      }
+    } else {
+      addCheck(report, 'skip', 'wallet-proof', 'wallet.broadcast', 'Transaction broadcast skipped', 'Dry proof mode signed the transaction but did not broadcast it.');
+    }
+  } catch (error) {
+    addCheck(report, 'fail', 'wallet-proof', 'wallet.adapter', 'Wallet proof execution', error.message);
+  }
+
+  return finalizeReport(report);
+}
+
 export function formatTextReport(report) {
   const lines = [];
   lines.push(`CallQuarry ${report.callquarryVersion} report`);
@@ -680,12 +884,16 @@ export function parseArgs(argv) {
   const command = args[0] && !args[0].startsWith('-') ? args.shift() : 'validate';
   const options = {
     command,
-    networkSelector: 'default',
+    networkSelector: command === 'prove-wallet' ? 'pharos-atlantic-testnet' : 'default',
     networkFile: DEFAULT_NETWORK_FILE,
     timeoutMs: 8000,
     format: 'text',
     offline: false,
-    strict: false
+    strict: false,
+    privateKeyEnv: 'PHAROS_PRIVATE_KEY',
+    valueWei: '0',
+    data: '0x',
+    confirmations: 1
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -697,6 +905,9 @@ export function parseArgs(argv) {
         break;
       case '--networks':
       case '-n':
+        options.networkSelector = args[++index];
+        break;
+      case '--network':
         options.networkSelector = args[++index];
         break;
       case '--network-file':
@@ -718,6 +929,30 @@ export function parseArgs(argv) {
       case '--strict':
         options.strict = true;
         break;
+      case '--private-key-env':
+        options.privateKeyEnv = args[++index];
+        break;
+      case '--to':
+        options.to = args[++index];
+        break;
+      case '--value-wei':
+        options.valueWei = args[++index];
+        break;
+      case '--data':
+        options.data = args[++index];
+        break;
+      case '--broadcast':
+        options.broadcast = true;
+        break;
+      case '--i-understand-this-spends-gas':
+        options.consent = true;
+        break;
+      case '--allow-mainnet':
+        options.allowMainnet = true;
+        break;
+      case '--wait-confirmations':
+        options.confirmations = Number.parseInt(args[++index], 10);
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -735,15 +970,27 @@ function usage() {
 
 Usage:
   callquarry validate --manifest <file> [options]
+  callquarry prove-wallet [options]
 
 Options:
   --networks <ids>      Comma-separated network IDs, "default", or "all"
+  --network <id>        Single network ID for wallet proof mode
   --network-file <file> Custom network metadata JSON
   --offline             Skip live RPC checks
   --timeout-ms <n>      RPC timeout in milliseconds
   --format <text|json>  Output format
   --out <file>          Save report to a file
   --strict              Exit non-zero on warnings as well as failures
+  --private-key-env <n> Env var containing private key, default PHAROS_PRIVATE_KEY
+  --to <address>        Proof transaction recipient, defaults to signer address
+  --value-wei <wei>     Proof transaction value, default 0
+  --data <hex>          Proof transaction calldata, default 0x
+  --broadcast           Broadcast signed proof transaction
+  --i-understand-this-spends-gas
+                        Required with --broadcast
+  --allow-mainnet       Required to run signed proof on mainnet
+  --wait-confirmations <n>
+                        Confirmations to wait after broadcast, default 1
   --help                Show this help
 `;
 }
@@ -759,10 +1006,10 @@ export async function main(argv = process.argv.slice(2)) {
     process.stdout.write(usage());
     return 0;
   }
-  if (options.command !== 'validate') {
+  if (!['validate', 'prove-wallet'].includes(options.command)) {
     throw new Error(`Unsupported command: ${options.command}`);
   }
-  if (!options.manifestPath) {
+  if (options.command === 'validate' && !options.manifestPath) {
     throw new Error('Missing --manifest <file>.');
   }
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0) {
@@ -772,7 +1019,13 @@ export async function main(argv = process.argv.slice(2)) {
     throw new Error('--format must be "text" or "json".');
   }
 
-  const report = await runValidation(options);
+  if (!Number.isInteger(options.confirmations) || options.confirmations < 0) {
+    throw new Error('--wait-confirmations must be a non-negative integer.');
+  }
+
+  const report = options.command === 'validate'
+    ? await runValidation(options)
+    : await runWalletProof(options);
   const output = options.format === 'json'
     ? `${JSON.stringify(report, null, 2)}\n`
     : formatTextReport(report);
