@@ -10,6 +10,8 @@ For Pharos hackathon review, CallQuarry supports the official Pharos Skill Engin
 npx skills add https://github.com/PharosNetwork/pharos-skill-engine
 ```
 
+Use the exact `npx` command above for the hackathon submission. `pnpm dlx skills add ...` and `bunx skills add ...` are alternative runners for developers who use pnpm or Bun, but they are not required here.
+
 Then run CallQuarry live checks with `--pharos-engine` to use Foundry `cast` against the Pharos networks defined by that engine. This repository includes `skills-lock.json` from that install so judges can see the official engine source that CallQuarry targets.
 
 ## What CallQuarry Does
