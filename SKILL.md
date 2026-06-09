@@ -9,6 +9,12 @@ description: Multi-skill validation harness for Pharos Agent Carnival Skill subm
 
 CallQuarry validates reusable agent Skills before they are used by a production agent or submitted to the Pharos Skill Hackathon. It exposes a deterministic CLI plus a target manifest format so other agents can run the same checks consistently, and it includes an opt-in wallet proof mode for testnet execution demos.
 
+For Pharos blockchain tasks, CallQuarry follows the official Pharos Skill Engine path. Install the engine first:
+
+```bash
+npx skills add https://github.com/PharosNetwork/pharos-skill-engine
+```
+
 ## Quick Start
 
 Run the bundled CLI from the skill directory:
@@ -24,6 +30,12 @@ node scripts/callquarry.mjs validate \
   --manifest examples/pharos-balance-target.json \
   --networks pharos-mainnet,pharos-atlantic-testnet \
   --out reports/callquarry-report.json
+```
+
+Run live checks through Pharos Skill Engine compatibility mode, backed by Foundry `cast`:
+
+```bash
+npm run validate:engine
 ```
 
 Run an optional dry wallet proof on Atlantic testnet:
@@ -50,8 +62,9 @@ CallQuarry is intentionally a multi-skill module:
 1. Ask for or create a CallQuarry target manifest for the Skill under review.
 2. Run an offline pass first to catch schema, prompt, secret, and sample-input problems.
 3. Run live network checks against `pharos-mainnet` and `pharos-atlantic-testnet` before claiming Pharos compatibility.
-4. Review every `fail` item before submission. Treat `warn` items as judge-facing quality gaps.
-5. Attach the generated report to the Skill repository or hackathon submission when useful.
+4. For hackathon review, run `--pharos-engine` so live checks use the official Pharos Skill Engine / Foundry `cast` path.
+5. Review every `fail` item before submission. Treat `warn` items as judge-facing quality gaps.
+6. Attach the generated report to the Skill repository or hackathon submission when useful.
 
 ## Target Manifest
 

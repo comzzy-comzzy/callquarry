@@ -1,13 +1,22 @@
 #!/usr/bin/env node
+import { execFile } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 const VERSION = '0.2.0';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_NETWORK_FILE = resolve(SKILL_ROOT, 'assets', 'networks.json');
+const DEFAULT_PHAROS_ENGINE_NETWORK_FILE = resolve(SKILL_ROOT, '.agents', 'skills', 'pharos-skill-engine', 'assets', 'networks.json');
 const DEFAULT_NETWORK_IDS = ['pharos-mainnet', 'pharos-atlantic-testnet'];
+const execFileAsync = promisify(execFile);
+
+const PHAROS_ENGINE_NETWORK_NAMES = {
+  'pharos-mainnet': 'mainnet',
+  'pharos-atlantic-testnet': 'atlantic-testnet'
+};
 
 const ALLOWED_ENTRYPOINT_TYPES = new Set([
   'read',
@@ -73,6 +82,14 @@ export async function loadNetworkConfig(path = DEFAULT_NETWORK_FILE) {
   }
   const defaults = Array.isArray(data.defaults) ? data.defaults : DEFAULT_NETWORK_IDS;
   return { networks: data.networks, defaults };
+}
+
+export async function loadPharosEngineNetworkConfig(path = DEFAULT_PHAROS_ENGINE_NETWORK_FILE) {
+  const data = await readJsonFile(path);
+  if (!Array.isArray(data.networks)) {
+    throw new Error(`Pharos Skill Engine network file ${path} must contain a networks array.`);
+  }
+  return { networks: data.networks, defaultNetwork: data.defaultNetwork, path };
 }
 
 export function selectNetworks(networks, defaults, selector = 'default') {
@@ -508,6 +525,130 @@ export async function rpcRequest(network, method, params = [], timeoutMs = 8000)
   }
 }
 
+function normalizeCastOutput(output) {
+  return String(output).trim();
+}
+
+function timeoutSeconds(timeoutMs) {
+  return String(Math.max(1, Math.ceil(timeoutMs / 1000)));
+}
+
+export function pharosEngineNetworkName(network) {
+  return PHAROS_ENGINE_NETWORK_NAMES[network.id] ?? network.engineName ?? network.id;
+}
+
+export function createCastRpcClient({ runner = execFileAsync, castBin = 'cast' } = {}) {
+  return async function castRpcRequest(network, method, params = [], timeoutMs = 8000) {
+    const baseArgs = ['--rpc-url', network.rpcUrl, '--rpc-timeout', timeoutSeconds(timeoutMs)];
+    let commandArgs;
+
+    switch (method) {
+      case 'eth_chainId':
+        commandArgs = ['chain-id', ...baseArgs];
+        break;
+      case 'eth_blockNumber':
+        commandArgs = ['block-number', ...baseArgs];
+        break;
+      case 'eth_gasPrice':
+        commandArgs = ['gas-price', ...baseArgs];
+        break;
+      case 'eth_estimateGas': {
+        const tx = params[0] ?? {};
+        commandArgs = ['estimate', tx.to ?? tx.from ?? '0x0000000000000000000000000000000000000000', ...baseArgs];
+        if (tx.from) commandArgs.push('--from', tx.from);
+        if (tx.value) commandArgs.push('--value', tx.value);
+        break;
+      }
+      default:
+        commandArgs = ['rpc', method, JSON.stringify(params), '--raw', ...baseArgs];
+        break;
+    }
+
+    try {
+      const { stdout } = await runner(castBin, commandArgs);
+      const output = normalizeCastOutput(stdout);
+      if (method === 'eth_chainId') return `0x${BigInt(output).toString(16)}`;
+      if (method === 'eth_blockNumber') return `0x${BigInt(output).toString(16)}`;
+      if (method === 'eth_gasPrice') return `0x${BigInt(output).toString(16)}`;
+      if (method === 'eth_estimateGas') return `0x${BigInt(output).toString(16)}`;
+      return output;
+    } catch (error) {
+      const detail = normalizeCastOutput(error.stderr || error.stdout || error.message);
+      throw new Error(detail || `cast ${method} failed`);
+    }
+  };
+}
+
+async function checkPharosSkillEngine(report, networks, options) {
+  const runner = options.commandRunner ?? execFileAsync;
+  const castBin = options.castBin ?? 'cast';
+  let ready = true;
+  try {
+    const { stdout } = await runner(castBin, ['--version']);
+    addCheck(report, 'pass', 'pharos-engine', 'engine.cast.available', 'Foundry cast available', `Using ${normalizeCastOutput(stdout).split('\n')[0]}.`);
+  } catch (error) {
+    addCheck(report, 'fail', 'pharos-engine', 'engine.cast.available', 'Foundry cast required', 'pharos-skill-engine requires Foundry cast for Pharos blockchain tasks. Install Foundry before live engine validation.');
+    return { ok: false, networks: [] };
+  }
+
+  let engineConfig = options.pharosEngineNetworkConfig;
+  if (!engineConfig) {
+    const engineNetworkFile = options.pharosEngineNetworkFile ?? DEFAULT_PHAROS_ENGINE_NETWORK_FILE;
+    try {
+      engineConfig = await loadPharosEngineNetworkConfig(engineNetworkFile);
+    } catch (error) {
+      addCheck(
+        report,
+        'fail',
+        'pharos-engine',
+        'engine.config.present',
+        'Pharos Skill Engine installed',
+        `Could not read ${engineNetworkFile}. Run: npx skills add https://github.com/PharosNetwork/pharos-skill-engine`,
+        { error: error.message }
+      );
+      return { ok: false, networks: [] };
+    }
+  }
+
+  const engineSource = engineConfig.path ?? 'provided Pharos Skill Engine config';
+  addCheck(report, 'pass', 'pharos-engine', 'engine.config.present', 'Pharos Skill Engine config loaded', `Loaded official Pharos network config from ${engineSource}.`, {
+    networks: engineConfig.networks.map((network) => network.name).filter(Boolean)
+  });
+
+  const byEngineName = new Map(engineConfig.networks.map((network) => [network.name, network]));
+  const engineNetworks = [];
+  for (const network of networks) {
+    const engineName = pharosEngineNetworkName(network);
+    const officialNetwork = byEngineName.get(engineName);
+    if (!officialNetwork) {
+      ready = false;
+    }
+    addCheck(
+      report,
+      officialNetwork ? 'pass' : 'fail',
+      'pharos-engine',
+      `engine.network.${network.id}`,
+      `${network.name} engine mapping`,
+      officialNetwork ? `Mapped to pharos-skill-engine network "${engineName}" and will use its official RPC config.` : `No installed pharos-skill-engine config exists for "${engineName}".`,
+      { network: network.id, engineName, rpcUrl: officialNetwork?.rpcUrl, chainId: officialNetwork?.chainId }
+    );
+
+    if (officialNetwork) {
+      engineNetworks.push({
+        ...network,
+        rpcUrl: officialNetwork.rpcUrl,
+        chainId: officialNetwork.chainId,
+        explorerUrl: officialNetwork.explorerUrl ?? network.explorerUrl,
+        explorerApiUrl: officialNetwork.explorerApiUrl ?? network.explorerApiUrl,
+        nativeToken: officialNetwork.nativeToken ?? network.nativeToken,
+        engineName,
+        engineSource
+      });
+    }
+  }
+  return { ok: ready && engineNetworks.length === networks.length, networks: engineNetworks };
+}
+
 async function runNetworkChecks(report, manifest, networks, options) {
   if (options.offline) {
     for (const network of networks) {
@@ -516,8 +657,18 @@ async function runNetworkChecks(report, manifest, networks, options) {
     return;
   }
 
-  const client = options.rpcClient ?? rpcRequest;
-  for (const network of networks) {
+  let client = options.rpcClient ?? rpcRequest;
+  let networksToCheck = networks;
+  if (options.pharosEngine && !options.rpcClient) {
+    const engineReady = await checkPharosSkillEngine(report, networks, options);
+    if (!engineReady.ok) return;
+    networksToCheck = engineReady.networks;
+    client = createCastRpcClient({
+      runner: options.commandRunner,
+      castBin: options.castBin
+    });
+  }
+  for (const network of networksToCheck) {
     await probeNetwork(report, network, options.timeoutMs, client);
     await runDeclaredReadCalls(report, manifest, network, options.timeoutMs, client);
     await runTransactionSimulations(report, manifest, network, options.timeoutMs, client);
@@ -652,7 +803,12 @@ export async function runValidation(options) {
   await runNetworkChecks(report, manifest, selected, {
     offline: Boolean(options.offline),
     timeoutMs: options.timeoutMs ?? 8000,
-    rpcClient: options.rpcClient
+    rpcClient: options.rpcClient,
+    pharosEngine: Boolean(options.pharosEngine),
+    pharosEngineNetworkConfig: options.pharosEngineNetworkConfig,
+    pharosEngineNetworkFile: options.pharosEngineNetworkFile,
+    commandRunner: options.commandRunner,
+    castBin: options.castBin
   });
 
   return finalizeReport(report);
@@ -890,6 +1046,8 @@ export function parseArgs(argv) {
     format: 'text',
     offline: false,
     strict: false,
+    pharosEngine: false,
+    castBin: 'cast',
     privateKeyEnv: 'PHAROS_PRIVATE_KEY',
     valueWei: '0',
     data: '0x',
@@ -928,6 +1086,15 @@ export function parseArgs(argv) {
         break;
       case '--strict':
         options.strict = true;
+        break;
+      case '--pharos-engine':
+        options.pharosEngine = true;
+        break;
+      case '--cast-bin':
+        options.castBin = args[++index];
+        break;
+      case '--pharos-engine-network-file':
+        options.pharosEngineNetworkFile = resolve(args[++index]);
         break;
       case '--private-key-env':
         options.privateKeyEnv = args[++index];
@@ -981,6 +1148,10 @@ Options:
   --format <text|json>  Output format
   --out <file>          Save report to a file
   --strict              Exit non-zero on warnings as well as failures
+  --pharos-engine       Use pharos-skill-engine-compatible Foundry cast checks
+  --cast-bin <path>     cast binary path/name for --pharos-engine, default cast
+  --pharos-engine-network-file <file>
+                        Override installed pharos-skill-engine networks.json path
   --private-key-env <n> Env var containing private key, default PHAROS_PRIVATE_KEY
   --to <address>        Proof transaction recipient, defaults to signer address
   --value-wei <wei>     Proof transaction value, default 0

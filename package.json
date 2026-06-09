@@ -10,6 +10,7 @@
     "site": "python3 -m http.server 4173",
     "validate": "node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --offline",
     "validate:live": "node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --networks pharos-mainnet,pharos-atlantic-testnet",
+    "validate:engine": "node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --networks pharos-mainnet,pharos-atlantic-testnet --pharos-engine",
     "prove-wallet:dry": "node scripts/callquarry.mjs prove-wallet --network pharos-atlantic-testnet",
     "test": "node --test tests/*.test.mjs"
   },

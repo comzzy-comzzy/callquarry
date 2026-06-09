@@ -1286,7 +1286,7 @@
       <div class="check-card">
         <div class="check-num">04</div>
         <div class="check-title">Pharos RPC Probing</div>
-        <div class="check-desc">Verifies RPC endpoints, confirms chain IDs, reads block height and gas price for Pharos Mainnet and Atlantic Testnet.</div>
+        <div class="check-desc">Verifies RPC endpoints, confirms chain IDs, reads block height and gas price for Pharos Mainnet and Atlantic Testnet. CLI engine mode runs these checks through Foundry <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;">cast</code>.</div>
       </div>
       <div class="check-card">
         <div class="check-num">05</div>
@@ -1400,7 +1400,7 @@
   <div class="section-inner">
     <p class="section-eyebrow scroll-reveal">CLI</p>
     <h2 class="section-title scroll-reveal">Two commands.<br><em>Full coverage.</em></h2>
-    <p class="section-body scroll-reveal" style="margin-bottom:0;">Run offline for instant schema checks, or live for full RPC validation. Wallet proof is always opt-in.</p>
+    <p class="section-body scroll-reveal" style="margin-bottom:0;">Run offline for instant schema checks, live through public RPC, or live through the official Pharos Skill Engine / Foundry path. Wallet proof is always opt-in.</p>
     <div class="cli-window scroll-reveal" style="position:relative; overflow:hidden;">
       <div class="scan-line"></div>
       <div class="cli-titlebar">
@@ -1418,7 +1418,22 @@
           <span class="cli-out-pass">0 failed</span>
         </div>
         <div class="cli-separator"></div>
-        <div class="cli-line"><span class="cli-comment"># Step 2 — live Pharos RPC check</span></div>
+        <div class="cli-line"><span class="cli-comment"># Step 2 — install official Pharos Skill Engine</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npx skills add</span> <span class="cli-path">https://github.com/PharosNetwork/pharos-skill-engine</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">pharos-skill-engine installed</span>&nbsp;&nbsp;
+          <span class="cli-out-label">skills-lock.json created</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Step 3 — live Pharos Skill Engine check</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npm run validate:engine</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">Foundry cast available</span>&nbsp;&nbsp;
+          <span class="cli-out-pass">Status: ready</span>&nbsp;&nbsp;
+          <span class="cli-out-label">Score: 100/100</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Optional — direct live Pharos RPC check</span></div>
         <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs validate</span> <span class="cli-flag">--manifest</span> <span class="cli-path">examples/pharos-balance-target.json</span> <span class="cli-flag">--networks</span> <span class="cli-path">pharos-mainnet,pharos-atlantic-testnet</span></div>
         <div class="cli-line" style="padding-left:12px;">
           <span class="cli-out-pass">Status: ready</span>&nbsp;&nbsp;
@@ -1426,14 +1441,14 @@
           <span class="cli-out-pass">0 failed</span>
         </div>
         <div class="cli-separator"></div>
-        <div class="cli-line"><span class="cli-comment"># Step 3 — wallet dry proof (no gas spent)</span></div>
+        <div class="cli-line"><span class="cli-comment"># Step 4 — wallet dry proof (no gas spent)</span></div>
         <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs prove-wallet</span> <span class="cli-flag">--network</span> <span class="cli-path">pharos-atlantic-testnet</span></div>
         <div class="cli-line" style="padding-left:12px;">
           <span class="cli-out-pass">Transaction signed</span>&nbsp;&nbsp;
           <span class="cli-out-skip">Transaction broadcast skipped</span>
         </div>
         <div class="cli-separator"></div>
-        <div class="cli-line"><span class="cli-comment"># Step 4 — broadcast proof (testnet, spends gas)</span></div>
+        <div class="cli-line"><span class="cli-comment"># Step 5 — broadcast proof (testnet, spends gas)</span></div>
         <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs prove-wallet</span> <span class="cli-flag">--network</span> <span class="cli-path">pharos-atlantic-testnet</span> <span class="cli-flag">--broadcast</span> <span class="cli-flag">--i-understand-this-spends-gas</span></div>
         <div class="cli-line" style="padding-left:12px;">
           <span class="cli-out-pass">Transaction broadcast</span>&nbsp;&nbsp;
@@ -1474,7 +1489,7 @@
             <button class="workbench-btn" id="downloadReportBtn" type="button" disabled>Export Report</button>
           </div>
           <p class="workbench-note">
-            Offline validation reports only manifest, schema, prompt, and test-vector checks. Live RPC Check reports only public Pharos network/read-call results and does not need a wallet.
+            Offline validation reports only manifest, schema, prompt, and test-vector checks. Live RPC Check reports only public Pharos network/read-call results and does not need a wallet. Use <code style="font-family:var(--mono);font-size:11px;">npm run validate:engine</code> in the CLI for the official Pharos Skill Engine / Foundry path.
           </p>
 
           <div class="wallet-panel">
@@ -1700,6 +1715,7 @@
             <div class="safe-cmd-group">
               <div class="safe-cmd-line safe-line">npm run validate</div>
               <div class="safe-cmd-line safe-line">npm run validate:live</div>
+              <div class="safe-cmd-line safe-line">npm run validate:engine</div>
               <div class="safe-cmd-line safe-line">node scripts/callquarry.mjs prove-wallet \</div>
               <div class="safe-cmd-line safe-line" style="padding-left:16px;">--network pharos-atlantic-testnet</div>
               <div class="safe-cmd-line safe-line">node scripts/callquarry.mjs prove-wallet \</div>
@@ -1740,6 +1756,12 @@
         <div class="doc-card-tag">Manifest Guide</div>
         <div class="doc-card-title">Target Manifest Field Reference</div>
         <div class="doc-card-desc">Complete reference for every field in the target manifest — name, version, entrypoints, schemas, threat model, and test vectors.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#cli">
+        <div class="doc-card-tag">Pharos Engine</div>
+        <div class="doc-card-title">Official Skill Engine Mode</div>
+        <div class="doc-card-desc">Install <code style="font-family:var(--mono);font-size:11px;">PharosNetwork/pharos-skill-engine</code> and run <code style="font-family:var(--mono);font-size:11px;">npm run validate:engine</code> for hackathon review.</div>
         <div class="doc-card-arrow">→</div>
       </a>
       <a class="doc-card" href="#cli">

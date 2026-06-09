@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  createCastRpcClient,
+  pharosEngineNetworkName,
   runWalletProof,
   runValidation,
   validateJsonSchemaValue,
@@ -139,6 +141,74 @@ describe('CallQuarry validation engine', () => {
     assert.ok(report.checks.find((check) => check.id === 'network.pharos-atlantic-testnet.chainId' && check.status === 'pass'));
     assert.ok(report.checks.find((check) => check.id === 'read.pharos-mainnet.zero-balance' && check.status === 'pass'));
     assert.ok(report.checks.find((check) => check.id === 'read.pharos-atlantic-testnet.zero-balance' && check.status === 'pass'));
+  });
+
+  it('maps CallQuarry network IDs to pharos-skill-engine network names', () => {
+    assert.equal(pharosEngineNetworkName({ id: 'pharos-atlantic-testnet' }), 'atlantic-testnet');
+    assert.equal(pharosEngineNetworkName({ id: 'pharos-mainnet' }), 'mainnet');
+  });
+
+  it('uses Foundry cast when Pharos Skill Engine mode is enabled', async () => {
+    const calls = [];
+    const commandRunner = async (bin, args) => {
+      calls.push([bin, args]);
+      if (args[0] === '--version') return { stdout: 'cast Version: test\n', stderr: '' };
+      if (args[0] === 'chain-id') return { stdout: args.includes('mock://official-atlantic') ? '688689\n' : '1672\n', stderr: '' };
+      if (args[0] === 'block-number') return { stdout: '4660\n', stderr: '' };
+      if (args[0] === 'gas-price') return { stdout: '1000000000\n', stderr: '' };
+      if (args[0] === 'rpc') return { stdout: '0x0\n', stderr: '' };
+      throw new Error(`Unexpected cast command ${args.join(' ')}`);
+    };
+
+    const report = await runValidation({
+      manifestObject: validManifest,
+      networks: [
+        { id: 'pharos-mainnet', name: 'Mainnet', chainId: 1672, rpcUrl: 'mock://local-mainnet' },
+        { id: 'pharos-atlantic-testnet', name: 'Atlantic', chainId: 688689, rpcUrl: 'mock://local-atlantic' }
+      ],
+      pharosEngineNetworkConfig: {
+        path: 'mock pharos-skill-engine networks.json',
+        networks: [
+          { name: 'mainnet', chainId: 1672, rpcUrl: 'mock://official-mainnet' },
+          { name: 'atlantic-testnet', chainId: 688689, rpcUrl: 'mock://official-atlantic' }
+        ]
+      },
+      defaultNetworkIds: ['pharos-mainnet', 'pharos-atlantic-testnet'],
+      networkSelector: 'default',
+      timeoutMs: 1000,
+      pharosEngine: true,
+      commandRunner
+    });
+
+    assert.equal(report.summary.failed, 0);
+    assert.ok(report.checks.find((check) => check.id === 'engine.cast.available' && check.status === 'pass'));
+    assert.ok(report.checks.find((check) => check.id === 'engine.config.present' && check.status === 'pass'));
+    assert.ok(report.checks.find((check) => check.id === 'engine.network.pharos-mainnet' && check.status === 'pass'));
+    assert.ok(report.checks.find((check) => check.id === 'engine.network.pharos-atlantic-testnet' && check.status === 'pass'));
+    assert.ok(calls.find(([, args]) => args[0] === '--version'));
+    assert.ok(calls.find(([, args]) => args[0] === 'chain-id'));
+    assert.ok(calls.find(([, args]) => args.includes('mock://official-mainnet')));
+    assert.ok(calls.find(([, args]) => args.includes('mock://official-atlantic')));
+    assert.equal(calls.find(([, args]) => args.includes('mock://local-mainnet')), undefined);
+    assert.ok(calls.find(([, args]) => args[0] === 'rpc' && args[1] === 'eth_getBalance'));
+  });
+
+  it('normalizes cast command outputs to JSON-RPC hex values', async () => {
+    const client = createCastRpcClient({
+      runner: async (_bin, args) => {
+        if (args[0] === 'chain-id') return { stdout: '688689\n', stderr: '' };
+        if (args[0] === 'block-number') return { stdout: '4660\n', stderr: '' };
+        if (args[0] === 'gas-price') return { stdout: '1000000000\n', stderr: '' };
+        if (args[0] === 'rpc') return { stdout: '0x0\n', stderr: '' };
+        throw new Error(`Unexpected command ${args.join(' ')}`);
+      }
+    });
+
+    const network = { id: 'pharos-atlantic-testnet', rpcUrl: 'mock://atlantic' };
+    assert.equal(await client(network, 'eth_chainId', [], 1000), '0xa8231');
+    assert.equal(await client(network, 'eth_blockNumber', [], 1000), '0x1234');
+    assert.equal(await client(network, 'eth_gasPrice', [], 1000), '0x3b9aca00');
+    assert.equal(await client(network, 'eth_getBalance', ['0x0000000000000000000000000000000000000000', 'latest'], 1000), '0x0');
   });
 
   it('refuses wallet proof without a private key env var', async () => {

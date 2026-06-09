@@ -2,6 +2,7 @@
   "networks": [
     {
       "id": "pharos-mainnet",
+      "engineName": "mainnet",
       "name": "Pharos Pacific Ocean Mainnet",
       "environment": "mainnet",
       "chainId": 1672,
@@ -17,6 +18,7 @@
     },
     {
       "id": "pharos-atlantic-testnet",
+      "engineName": "atlantic-testnet",
       "name": "Pharos Atlantic Testnet",
       "environment": "testnet",
       "chainId": 688689,

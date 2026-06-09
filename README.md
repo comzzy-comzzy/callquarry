@@ -4,6 +4,14 @@ CallQuarry is a reusable multi-skill validation harness for Pharos Agent Carniva
 
 Use it to check whether a Skill is safe, well-structured, and compatible with Pharos mainnet and testnet. It can also run an optional wallet proof that signs and broadcasts a zero-value self-transfer.
 
+For Pharos hackathon review, CallQuarry supports the official Pharos Skill Engine workflow. The engine says it is required for Pharos blockchain tasks and uses Foundry `cast` / `forge` for chain access. Install the required engine first:
+
+```bash
+npx skills add https://github.com/PharosNetwork/pharos-skill-engine
+```
+
+Then run CallQuarry live checks with `--pharos-engine` to use Foundry `cast` against the Pharos networks defined by that engine. This repository includes `skills-lock.json` from that install so judges can see the official engine source that CallQuarry targets.
+
 ## What CallQuarry Does
 
 - Checks Skill manifests and callable schemas
@@ -45,6 +53,7 @@ Requirements:
 
 - Node.js 20 or newer
 - Git
+- Foundry `cast` for official Pharos Skill Engine live validation
 - A funded Pharos wallet only for wallet proof mode
 
 Clone and install:
@@ -53,6 +62,13 @@ Clone and install:
 git clone https://github.com/comzzy-comzzy/callquarry.git
 cd callquarry
 npm install
+npx skills add https://github.com/PharosNetwork/pharos-skill-engine
+```
+
+Check that Foundry is available:
+
+```bash
+cast --version
 ```
 
 ## Website Workbench
@@ -280,6 +296,14 @@ node scripts/callquarry.mjs validate \
   --networks pharos-mainnet,pharos-atlantic-testnet
 ```
 
+Run live through the official Pharos Skill Engine / Foundry `cast` path:
+
+```bash
+npm run validate:engine
+```
+
+Expected result: `Status: ready`, `Score: 100/100`, and a passing `Foundry cast available` check.
+
 Save a report:
 
 ```bash
@@ -297,6 +321,13 @@ CallQuarry ships with these networks:
 - `pharos-mainnet`: chain ID `1672`, RPC `https://rpc.pharos.xyz`
 - `pharos-atlantic-testnet`: chain ID `688689`, RPC `https://atlantic.dplabs-internal.com`
 - `pharos-legacy-testnet`: chain ID `688688`, RPC `https://testnet.dplabs-internal.com`
+
+For compatibility with `PharosNetwork/pharos-skill-engine`, CallQuarry maps:
+
+- `pharos-mainnet` -> `mainnet`
+- `pharos-atlantic-testnet` -> `atlantic-testnet`
+
+`pharos-legacy-testnet` is available for direct RPC checks only unless the installed official engine config adds it.
 
 ## CLI Help
 
