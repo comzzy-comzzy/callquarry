@@ -1,65 +1,220 @@
 # CallQuarry
 
-CallQuarry is a reusable multi-skill validation harness for Pharos Agent Carnival Skill submissions. It checks a Skill before another agent trusts it.
+CallQuarry is a reusable multi-skill validation harness for Pharos Agent Carnival Skill submissions.
 
-It can lint callable schemas, scan prompts for adversarial text, validate sample inputs, probe Pharos mainnet/testnet RPCs, dry-run read calls, estimate gas, and generate a scored readiness report.
+Use it to check whether a Skill is safe, well-structured, and compatible with Pharos mainnet and testnet. It can also run an optional wallet proof that signs and broadcasts a zero-value self-transfer.
 
-## What It Checks
+## What CallQuarry Does
 
-- Skill manifest quality
-- Entrypoint input and output schemas
-- Prompt-injection and secret-leak risks
-- Local sample inputs
-- Pharos Pacific Ocean Mainnet RPC compatibility
-- Pharos Atlantic Testnet RPC compatibility
-- JSON-RPC read probes
-- `eth_estimateGas` dry runs
-- Optional signed wallet proof on Pharos testnet
+- Checks Skill manifests and callable schemas
+- Scans prompts for common jailbreak or secret-leak patterns
+- Validates sample inputs
+- Tests Pharos mainnet and Atlantic testnet RPCs
+- Runs read-only JSON-RPC calls such as `eth_getBalance`
+- Runs gas estimation with `eth_estimateGas`
+- Optionally proves wallet execution by signing a transaction
+- Optionally broadcasts a zero-value proof transaction
 
-CallQuarry is read-only by default. The optional wallet proof mode is disabled unless you explicitly run `prove-wallet`.
+## Safety First
 
-## Requirements
+These commands are safe and do not spend gas:
 
-- Node.js 20 or newer
-- Git
-- Internet access only when running live Pharos RPC checks
+```bash
+npm run validate
+npm run validate:live
+node scripts/callquarry.mjs prove-wallet --network pharos-atlantic-testnet
+node scripts/callquarry.mjs prove-wallet --network pharos-mainnet --allow-mainnet
+```
+
+These commands broadcast a transaction and spend gas:
+
+```bash
+node scripts/callquarry.mjs prove-wallet --network pharos-atlantic-testnet --broadcast --i-understand-this-spends-gas
+node scripts/callquarry.mjs prove-wallet --network pharos-mainnet --allow-mainnet --broadcast --i-understand-this-spends-gas
+```
+
+Never commit your private key. Set it only in your terminal:
+
+```bash
+export PHAROS_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
+```
 
 ## Install
 
-Clone the repo:
+Requirements:
+
+- Node.js 20 or newer
+- Git
+- A funded Pharos wallet only for wallet proof mode
+
+Clone and install:
 
 ```bash
 git clone https://github.com/comzzy-comzzy/callquarry.git
 cd callquarry
-```
-
-Install local package metadata:
-
-```bash
 npm install
 ```
 
-The validator path is dependency-light. Wallet proof mode uses `viem` for EVM signing and raw transaction broadcast.
+## Step 1: Run Local Tests
 
-## Run the Beginner Example
+This confirms the package works on your machine.
 
-First run an offline validation. This does not call any blockchain RPC.
+```bash
+npm test
+```
+
+Expected result:
+
+```text
+pass 1
+fail 0
+```
+
+## Step 2: Run Safe Offline Validation
+
+This does not call any blockchain RPC.
 
 ```bash
 npm run validate
 ```
 
-Equivalent direct command:
+Expected result:
 
-```bash
-node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --offline
+```text
+Status: ready
+0 failed
 ```
 
-You should see a report with a score, pass/warn/fail counts, and check details.
+## Step 3: Run Live Pharos RPC Validation
 
-## Run Against Pharos Mainnet and Testnet
+This checks both Pharos mainnet and Atlantic testnet. It does not need your private key and does not spend gas.
 
-Use this when you want to prove the target Skill is compatible with both supported Pharos networks:
+```bash
+npm run validate:live
+```
+
+Expected result:
+
+```text
+Status: ready
+Score: 100/100
+0 failed
+```
+
+## Step 4: Add Your Wallet Key Locally
+
+Only do this in your terminal. Do not paste your private key into GitHub, README files, manifests, or command arguments.
+
+```bash
+export PHAROS_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
+```
+
+## Step 5: Test Wallet Proof on Testnet Without Spending Gas
+
+This reads your testnet balance, estimates gas, and signs locally. It does not broadcast.
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet
+```
+
+Expected result:
+
+```text
+Status: ready
+Transaction signed
+Transaction broadcast skipped
+```
+
+## Step 6: Broadcast Wallet Proof on Testnet
+
+This sends a zero-value self-transfer on Pharos Atlantic testnet. It spends testnet gas.
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet \
+  --broadcast \
+  --i-understand-this-spends-gas
+```
+
+Save a JSON report:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-atlantic-testnet \
+  --broadcast \
+  --i-understand-this-spends-gas \
+  --format json \
+  --out reports/wallet-proof-testnet.json
+```
+
+## Step 7: Test Wallet Proof on Mainnet Without Spending Gas
+
+This signs locally on Pharos mainnet, but does not broadcast.
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-mainnet \
+  --allow-mainnet
+```
+
+Expected result:
+
+```text
+Status: ready
+Transaction signed
+Transaction broadcast skipped
+```
+
+## Step 8: Broadcast Wallet Proof on Mainnet
+
+This sends a zero-value self-transfer on Pharos mainnet. It spends mainnet gas.
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-mainnet \
+  --allow-mainnet \
+  --broadcast \
+  --i-understand-this-spends-gas
+```
+
+If the public RPC rate-limits receipt polling, broadcast with receipt waiting disabled:
+
+```bash
+node scripts/callquarry.mjs prove-wallet \
+  --network pharos-mainnet \
+  --allow-mainnet \
+  --broadcast \
+  --i-understand-this-spends-gas \
+  --wait-confirmations 0
+```
+
+Then check the transaction on https://pharosscan.xyz.
+
+## Proven Demo Transactions
+
+CallQuarry was tested successfully with zero-value self-transfers:
+
+- Atlantic testnet: `0x18dd2d9dd73671fc5bf10e508aee640b04a6181c48ba1e3896459881e20bdb06`
+- Mainnet: `0x1178a4b4d10384e47c0f396cd314749f6ca1e71b99b642cfcf86ddfa16d5e13e`
+
+## Validate Your Own Skill
+
+CallQuarry validates a target Skill through a JSON manifest. Start from:
+
+```bash
+examples/pharos-balance-target.json
+```
+
+Run offline:
+
+```bash
+node scripts/callquarry.mjs validate \
+  --manifest examples/pharos-balance-target.json \
+  --offline
+```
+
+Run live:
 
 ```bash
 node scripts/callquarry.mjs validate \
@@ -67,7 +222,7 @@ node scripts/callquarry.mjs validate \
   --networks pharos-mainnet,pharos-atlantic-testnet
 ```
 
-Save the report as JSON:
+Save a report:
 
 ```bash
 node scripts/callquarry.mjs validate \
@@ -77,158 +232,22 @@ node scripts/callquarry.mjs validate \
   --out reports/callquarry-report.json
 ```
 
-## Validate Your Own Skill
-
-Create a target manifest for your Skill:
-
-```json
-{
-  "name": "my-pharos-skill",
-  "version": "0.1.0",
-  "description": "Reusable Skill that performs one clear job for Pharos agents.",
-  "networks": ["pharos-mainnet", "pharos-atlantic-testnet"],
-  "entrypoints": [
-    {
-      "id": "getThing",
-      "type": "read",
-      "description": "Read one useful value from a Pharos RPC or contract.",
-      "inputSchema": {
-        "type": "object",
-        "required": ["address"],
-        "properties": {
-          "address": {
-            "type": "string",
-            "pattern": "^0x[a-fA-F0-9]{40}$"
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string"
-          }
-        }
-      },
-      "testVectors": [
-        {
-          "id": "valid-address",
-          "input": {
-            "address": "0x0000000000000000000000000000000000000000"
-          }
-        }
-      ]
-    }
-  ],
-  "threatModel": {
-    "permissions": ["rpc-read"],
-    "writes": false,
-    "secrets": []
-  }
-}
-```
-
-Then run:
-
-```bash
-node scripts/callquarry.mjs validate --manifest path/to/your-manifest.json --offline
-```
-
-When offline checks pass, run live checks:
-
-```bash
-node scripts/callquarry.mjs validate \
-  --manifest path/to/your-manifest.json \
-  --networks pharos-mainnet,pharos-atlantic-testnet
-```
-
-## CLI Options
-
-```text
-callquarry validate --manifest <file> [options]
-
-Options:
-  --networks <ids>      Comma-separated network IDs, "default", or "all"
-  --network-file <file> Custom network metadata JSON
-  --offline             Skip live RPC checks
-  --timeout-ms <n>      RPC timeout in milliseconds
-  --format <text|json>  Output format
-  --out <file>          Save report to a file
-  --strict              Return exit code 1 on warnings as well as failures
-```
-
 ## Pharos Networks
 
-CallQuarry ships with:
+CallQuarry ships with these networks:
 
 - `pharos-mainnet`: chain ID `1672`, RPC `https://rpc.pharos.xyz`
 - `pharos-atlantic-testnet`: chain ID `688689`, RPC `https://atlantic.dplabs-internal.com`
 - `pharos-legacy-testnet`: chain ID `688688`, RPC `https://testnet.dplabs-internal.com`
 
-The default live validation uses mainnet and Atlantic testnet.
-
-## Optional Wallet Proof
-
-Use this only when you want to prove that CallQuarry can sign a real Pharos-compatible transaction.
-
-Safety defaults:
-
-- Uses `pharos-atlantic-testnet` by default
-- Does not broadcast unless `--broadcast` is supplied
-- Refuses broadcast unless `--i-understand-this-spends-gas` is supplied
-- Refuses mainnet unless `--allow-mainnet` is supplied
-- Reads the private key only from an environment variable
-- Never prints or stores the private key
-
-Set your private key in your shell. Do not paste it into a manifest, README, command argument, or GitHub issue.
+## CLI Help
 
 ```bash
-export PHAROS_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
+node scripts/callquarry.mjs --help
 ```
 
-Dry proof on Atlantic testnet. This reads balance, estimates gas, and signs locally, but does not broadcast:
+## Notes for Hackathon Reviewers
 
-```bash
-node scripts/callquarry.mjs prove-wallet \
-  --network pharos-atlantic-testnet
-```
+CallQuarry is reusable because it is not tied to one Skill implementation. Any Pharos Skill can provide a target manifest and run through the same validation pipeline.
 
-Real broadcast proof on Atlantic testnet. This sends a zero-value self-transfer and spends only testnet gas:
-
-```bash
-node scripts/callquarry.mjs prove-wallet \
-  --network pharos-atlantic-testnet \
-  --broadcast \
-  --i-understand-this-spends-gas
-```
-
-Save the proof as JSON:
-
-```bash
-node scripts/callquarry.mjs prove-wallet \
-  --network pharos-atlantic-testnet \
-  --broadcast \
-  --i-understand-this-spends-gas \
-  --format json \
-  --out reports/wallet-proof.json
-```
-
-Mainnet proof is deliberately harder to run:
-
-```bash
-node scripts/callquarry.mjs prove-wallet \
-  --network pharos-mainnet \
-  --allow-mainnet
-```
-
-Add `--broadcast --i-understand-this-spends-gas` only if you intentionally want a mainnet proof transaction.
-
-## Test Locally
-
-Run the test suite:
-
-```bash
-npm test
-```
-
-The tests use an injected mock JSON-RPC client, so they do not need blockchain network access.
+The default validator is read-only. Wallet proof mode is explicit, guarded, and suitable for demoing real Pharos execution when judges want proof beyond RPC reads and gas simulation.
