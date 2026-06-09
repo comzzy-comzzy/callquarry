@@ -655,6 +655,13 @@
       justify-content: space-between;
       gap: 12px;
     }
+    .workbench-head-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .workbench-panel.dark .workbench-head {
       border-bottom-color: rgba(255,255,255,0.08);
       background: #1A1A1A;
@@ -1423,7 +1430,10 @@
       <div class="workbench-panel">
         <div class="workbench-head">
           <div class="workbench-title">Target Manifest</div>
-          <button class="workbench-btn" id="loadExampleBtn" type="button">Load Example</button>
+          <div class="workbench-head-actions">
+            <button class="workbench-btn" id="loadExampleBtn" type="button">Load Example</button>
+            <button class="workbench-btn" id="randomManifestBtn" type="button">Random Manifest</button>
+          </div>
         </div>
         <div class="workbench-body">
           <label class="workbench-label" for="manifestInput">Manifest JSON</label>
@@ -1827,6 +1837,7 @@
   };
 
   const DEFAULT_NETWORK_IDS = ['pharos-mainnet', 'pharos-atlantic-testnet'];
+  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
   const EXAMPLE_MANIFEST = {
     name: 'pharos-native-balance-skill',
     version: '0.1.0',
@@ -1881,6 +1892,75 @@
     threatModel: { permissions: ['rpc-read'], writes: false, secrets: [] }
   };
 
+  const RANDOM_MANIFEST_TEMPLATES = [
+    {
+      slug: 'balance-sentinel',
+      description: 'Reusable read-only Skill that checks native token balances across Pharos networks for agent treasury monitoring.',
+      prompt: 'Read the native token balance for an address and return the raw wei value plus the selected network.',
+      entrypointId: 'getNativeBalance',
+      entrypointDescription: 'Fetch native PROS or PHRS balance for a checksummed or lowercase EVM address.',
+      readCall: { id: 'balance-of-zero-address', method: 'eth_getBalance', params: [ZERO_ADDRESS, 'latest'] },
+      outputRequired: ['address', 'wei', 'network'],
+      outputProperties: { address: { type: 'string' }, wei: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Invalid EVM address', 'Unsupported block tag']
+    },
+    {
+      slug: 'nonce-watch',
+      description: 'Reusable read-only Skill that checks account nonce state on Pharos for transaction planning agents.',
+      prompt: 'Read the account transaction count for an address and return the nonce as a raw hexadecimal value.',
+      entrypointId: 'getAccountNonce',
+      entrypointDescription: 'Fetch transaction count for an EVM address on Pharos.',
+      readCall: { id: 'nonce-of-zero-address', method: 'eth_getTransactionCount', params: [ZERO_ADDRESS, 'latest'] },
+      outputRequired: ['address', 'nonceHex', 'network'],
+      outputProperties: { address: { type: 'string' }, nonceHex: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Invalid EVM address', 'Unsupported block tag']
+    },
+    {
+      slug: 'code-inspector',
+      description: 'Reusable read-only Skill that inspects deployed bytecode presence for Pharos contract verification workflows.',
+      prompt: 'Read contract bytecode for an address and return whether code is present on the selected Pharos network.',
+      entrypointId: 'getContractCode',
+      entrypointDescription: 'Fetch deployed bytecode for an EVM address on Pharos.',
+      readCall: { id: 'code-at-zero-address', method: 'eth_getCode', params: [ZERO_ADDRESS, 'latest'] },
+      outputRequired: ['address', 'code', 'network'],
+      outputProperties: { address: { type: 'string' }, code: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Invalid EVM address', 'Unsupported block tag']
+    },
+    {
+      slug: 'gas-oracle',
+      description: 'Reusable read-only Skill that samples Pharos gas price data for autonomous execution cost estimators.',
+      prompt: 'Read current Pharos gas price and return a raw wei value that downstream agents can use for planning.',
+      entrypointId: 'getGasPrice',
+      entrypointDescription: 'Fetch the latest gas price from a Pharos RPC endpoint.',
+      readCall: { id: 'current-gas-price', method: 'eth_gasPrice', params: [] },
+      outputRequired: ['gasPriceWei', 'network'],
+      outputProperties: { gasPriceWei: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Gas price unavailable']
+    },
+    {
+      slug: 'block-pulse',
+      description: 'Reusable read-only Skill that checks current Pharos block height for liveness and monitoring agents.',
+      prompt: 'Read the latest Pharos block number and return the height with the network identifier.',
+      entrypointId: 'getLatestBlock',
+      entrypointDescription: 'Fetch the latest block number from a Pharos RPC endpoint.',
+      readCall: { id: 'latest-block-number', method: 'eth_blockNumber', params: [] },
+      outputRequired: ['blockNumberHex', 'network'],
+      outputProperties: { blockNumberHex: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Block number unavailable']
+    },
+    {
+      slug: 'chain-id-guard',
+      description: 'Reusable read-only Skill that verifies Pharos chain identity before an agent trusts network state.',
+      prompt: 'Read the Pharos chain ID and compare it with the selected network configuration before returning status.',
+      entrypointId: 'getChainIdentity',
+      entrypointDescription: 'Fetch the active chain ID from a Pharos RPC endpoint.',
+      readCall: { id: 'active-chain-id', method: 'eth_chainId', params: [] },
+      outputRequired: ['chainIdHex', 'network'],
+      outputProperties: { chainIdHex: { type: 'string' }, network: { type: 'string' } },
+      failureModes: ['RPC endpoint unavailable', 'Unexpected chain ID']
+    }
+  ];
+
   const ALLOWED_ENTRYPOINT_TYPES = new Set(['read', 'write', 'transaction', 'payment', 'oracle', 'tool', 'prompt', 'workflow']);
   const PROMPT_RISK_PATTERNS = [
     { id: 'prompt.ignore-previous', severity: 'fail', pattern: /ignore\s+(all\s+)?(previous|prior|above|system)\s+instructions/i, message: 'Prompt text contains an instruction-override phrase.' },
@@ -1892,6 +1972,78 @@
 
   let currentReport = null;
   let connectedAccount = null;
+
+  function randomChoice(items) {
+    return items[Math.floor(Math.random() * items.length)];
+  }
+
+  function randomSuffix() {
+    return Math.random().toString(16).slice(2, 8);
+  }
+
+  function makeRandomManifest() {
+    const template = randomChoice(RANDOM_MANIFEST_TEMPLATES);
+    const needsAddress = template.readCall.params.includes(ZERO_ADDRESS);
+    const inputProperties = {
+      network: { type: 'string', enum: DEFAULT_NETWORK_IDS }
+    };
+    const required = ['network'];
+    const testInput = { network: 'pharos-atlantic-testnet' };
+
+    if (needsAddress) {
+      inputProperties.address = { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' };
+      inputProperties.blockTag = { type: 'string', enum: ['latest', 'safe', 'finalized', 'pending', 'earliest'] };
+      required.push('address');
+      testInput.address = ZERO_ADDRESS;
+      testInput.blockTag = 'latest';
+    }
+
+    return {
+      name: `pharos-${template.slug}-${randomSuffix()}`,
+      version: '0.1.0',
+      description: template.description,
+      networks: DEFAULT_NETWORK_IDS,
+      prompts: [template.prompt],
+      entrypoints: [
+        {
+          id: template.entrypointId,
+          type: 'read',
+          description: template.entrypointDescription,
+          inputSchema: {
+            type: 'object',
+            required,
+            additionalProperties: false,
+            properties: inputProperties
+          },
+          outputSchema: {
+            type: 'object',
+            required: template.outputRequired,
+            additionalProperties: false,
+            properties: template.outputProperties
+          },
+          readCalls: [
+            {
+              id: template.readCall.id,
+              method: template.readCall.method,
+              params: template.readCall.params
+            }
+          ],
+          testVectors: [
+            {
+              id: `${template.slug}-happy-path`,
+              input: testInput
+            }
+          ],
+          failureModes: template.failureModes
+        }
+      ],
+      threatModel: {
+        permissions: ['rpc-read'],
+        writes: false,
+        secrets: []
+      }
+    };
+  }
 
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -2281,6 +2433,9 @@
     manifestInput.value = JSON.stringify(EXAMPLE_MANIFEST, null, 2);
     document.getElementById('loadExampleBtn').addEventListener('click', () => {
       manifestInput.value = JSON.stringify(EXAMPLE_MANIFEST, null, 2);
+    });
+    document.getElementById('randomManifestBtn').addEventListener('click', () => {
+      manifestInput.value = JSON.stringify(makeRandomManifest(), null, 2);
     });
     document.getElementById('offlineValidateBtn').addEventListener('click', () => {
       try {

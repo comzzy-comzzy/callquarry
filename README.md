@@ -102,6 +102,8 @@ Use `127.0.0.1` only when you are browsing from the same machine that is running
 The website can:
 
 - Load the example Skill manifest
+- Generate random valid Pharos Skill manifests for quick judge testing
+- Let judges paste their own Pharos Skill manifest JSON
 - Run offline manifest validation in the browser
 - Run live Pharos mainnet/testnet RPC checks from the browser
 - Export a JSON report
