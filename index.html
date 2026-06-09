@@ -1474,7 +1474,7 @@
             <button class="workbench-btn" id="downloadReportBtn" type="button" disabled>Export Report</button>
           </div>
           <p class="workbench-note">
-            Offline validation never calls Pharos RPCs. Live validation calls public RPC methods only and does not need a wallet.
+            Offline validation reports only manifest, schema, prompt, and test-vector checks. Live RPC Check reports only public Pharos network/read-call results and does not need a wallet.
           </p>
 
           <div class="wallet-panel">
@@ -2313,8 +2313,35 @@
 
   async function runLiveValidation() {
     const manifest = parseManifestInput();
-    const report = validateManifestShape(manifest);
-    for (const networkId of DEFAULT_NETWORK_IDS) {
+    const report = makeReport(manifest?.name ?? 'live-rpc-check');
+    report.target.version = manifest?.version;
+    Object.assign(report.target, describeManifest(manifest));
+
+    if (!isObject(manifest)) {
+      addCheck(report, 'fail', 'live-rpc', 'live.manifest.root', 'Manifest unavailable', 'Live RPC Check needs a valid manifest object so it can read networks and readCalls.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+
+    const declaredNetworks = Array.isArray(manifest.networks) && manifest.networks.length > 0 ? manifest.networks : DEFAULT_NETWORK_IDS;
+    const selectedNetworks = declaredNetworks.filter((networkId) => NETWORKS[networkId]);
+    if (selectedNetworks.length === 0) {
+      addCheck(report, 'fail', 'live-rpc', 'live.networks', 'No supported Pharos networks', 'Live RPC Check supports pharos-mainnet and pharos-atlantic-testnet.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+
+    const readCalls = (Array.isArray(manifest.entrypoints) ? manifest.entrypoints : [])
+      .flatMap((entrypoint) => (Array.isArray(entrypoint?.readCalls) ? entrypoint.readCalls.map((call) => ({ entrypointId: entrypoint.id, call })) : []))
+      .filter(({ call }) => call && typeof call.method === 'string');
+    if (readCalls.length === 0) {
+      addCheck(report, 'fail', 'live-rpc', 'live.readCalls', 'No read calls declared', 'Live RPC Check runs the readCalls declared by the active manifest.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+
+    addCheck(report, 'pass', 'live-rpc', 'live.target.loaded', 'Live target loaded', `Running ${readCalls.length} declared read call(s) across ${selectedNetworks.length} supported network(s).`);
+    for (const networkId of selectedNetworks) {
       const network = NETWORKS[networkId];
       try {
         const chainIdHex = await rpcRequest(network, 'eth_chainId');
@@ -2327,15 +2354,13 @@
       } catch (error) {
         addCheck(report, 'fail', 'network', `network.${network.id}.rpc`, `${network.name} RPC`, error.message);
       }
-      for (const entrypoint of manifest.entrypoints ?? []) {
-        for (const call of entrypoint.readCalls ?? []) {
-          try {
-            const result = await rpcRequest(network, call.method, call.params ?? []);
-            const resultPreview = previewValue(result);
-            addCheck(report, 'pass', 'rpc-read', `read.${network.id}.${call.id ?? call.method}`, `${network.name} ${call.method}`, `${call.id ?? 'read-call'} returned ${resultPreview}.`, { resultPreview });
-          } catch (error) {
-            addCheck(report, 'fail', 'rpc-read', `read.${network.id}.${call.id ?? call.method}`, `${network.name} ${call.method}`, `${call.id ?? 'read-call'} failed: ${error.message}`);
-          }
+      for (const { entrypointId, call } of readCalls) {
+        try {
+          const result = await rpcRequest(network, call.method, call.params ?? []);
+          const resultPreview = previewValue(result);
+          addCheck(report, 'pass', 'rpc-read', `read.${network.id}.${entrypointId ?? 'entrypoint'}.${call.id ?? call.method}`, `${network.name} ${call.method}`, `${call.id ?? 'read-call'} returned ${resultPreview}.`, { resultPreview });
+        } catch (error) {
+          addCheck(report, 'fail', 'rpc-read', `read.${network.id}.${entrypointId ?? 'entrypoint'}.${call.id ?? call.method}`, `${network.name} ${call.method}`, `${call.id ?? 'read-call'} failed: ${error.message}`);
         }
       }
     }
