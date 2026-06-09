@@ -121,7 +121,38 @@
       display: none; flex-direction: column; gap: 5px;
       background: none; border: none; cursor: pointer; padding: 4px;
     }
-    .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--text-primary); border-radius: 2px; }
+    .nav-hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--text-primary); border-radius: 2px;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .nav-hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.active span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu {
+      display: none;
+      position: sticky; top: 60px; z-index: 85;
+      background: rgba(247,247,245,0.98);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px 18px;
+    }
+    .mobile-menu.open { display: block; }
+    .mobile-menu a {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 44px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-primary);
+      text-decoration: none;
+      border-top: 1px solid var(--border);
+    }
+    .mobile-menu a:first-child { border-top: 0; }
+    .mobile-menu .mobile-launch {
+      justify-content: center;
+      background: var(--text-primary); color: var(--bg);
+      border: 0; border-radius: 6px;
+      margin-top: 10px;
+    }
 
     /* ── HERO ── */
     .hero {
@@ -215,6 +246,7 @@
 
     /* ── SECTION COMMON ── */
     section { position: relative; }
+    section, [id] { scroll-margin-top: 84px; }
     .section-inner {
       max-width: 1100px; margin: 0 auto;
       padding: 100px 28px;
@@ -999,6 +1031,7 @@
       .section-inner { padding: 72px 20px; }
       .hero { padding: 72px 20px 48px; }
       .nav-links { display: none; }
+      .nav-cta { display: none; }
       .nav-hamburger { display: flex; }
       .hero-stats { gap: 24px; }
       .footer-top { grid-template-columns: 1fr; }
@@ -1010,7 +1043,7 @@
     }
   </style>
 </head>
-<body>
+<body id="top">
 
 <!-- ── ANNOUNCE BAR ── -->
 <div class="announce-bar" id="announceBar">
@@ -1020,8 +1053,8 @@
 </div>
 
 <!-- ── NAV ── -->
-<nav>
-  <a class="nav-logo" href="#">
+<nav aria-label="Primary navigation">
+  <a class="nav-logo" href="#top">
     <span class="logo-mark">
       <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- CallQuarry logo: a diamond/quarry shape with a scan line -->
@@ -1040,17 +1073,28 @@
   </a>
   <ul class="nav-links">
     <li><a href="#features">Features</a></li>
+    <li><a href="#scoring">Scoring</a></li>
     <li><a href="#workbench">Workbench</a></li>
     <li><a href="#networks">Networks</a></li>
-    <li><a href="#cli">CLI</a></li>
+    <li><a href="#cli">CLI Reference</a></li>
     <li><a href="#docs">Docs</a></li>
-    <li><a href="#manifest">Manifest</a></li>
   </ul>
   <a class="nav-cta" href="#workbench">Launch</a>
-  <button class="nav-hamburger" aria-label="Menu">
+  <button class="nav-hamburger" id="mobileMenuButton" type="button" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
 </nav>
+<div class="mobile-menu" id="mobileMenu" aria-label="Mobile navigation">
+  <a href="#features">Features <span>01</span></a>
+  <a href="#scoring">Scoring <span>02</span></a>
+  <a href="#cli">CLI Reference <span>03</span></a>
+  <a href="#networks">Networks <span>04</span></a>
+  <a href="#docs">Docs <span>05</span></a>
+  <a href="#manifest">Manifest Guide <span>06</span></a>
+  <a href="#wallet-proof">Wallet Proof <span>07</span></a>
+  <a href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">Extending <span>08</span></a>
+  <a class="mobile-launch" href="#workbench">Launch</a>
+</div>
 
 <!-- ── HERO ── -->
 <section class="hero dot-bg">
@@ -1569,7 +1613,7 @@
 </section>
 
 <!-- ── SAFETY ── -->
-<section class="safety-section">
+<section class="safety-section" id="wallet-proof">
   <div class="section-inner">
     <div class="safety-layout">
       <div>
@@ -1641,37 +1685,37 @@
     <p class="section-eyebrow scroll-reveal">Documentation</p>
     <h2 class="section-title scroll-reveal">Everything you need<br><em>to ship.</em></h2>
     <div class="docs-grid scroll-reveal">
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="https://github.com/comzzy-comzzy/callquarry#install" target="_blank" rel="noopener">
         <div class="doc-card-tag">Getting Started</div>
         <div class="doc-card-title">Install &amp; Run Your First Validation</div>
         <div class="doc-card-desc">Clone the repo, install dependencies, and run your first offline validation in under two minutes.</div>
         <div class="doc-card-arrow">→</div>
       </a>
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="https://github.com/comzzy-comzzy/callquarry/blob/main/references/target-manifest.md" target="_blank" rel="noopener">
         <div class="doc-card-tag">Manifest Guide</div>
         <div class="doc-card-title">Target Manifest Field Reference</div>
         <div class="doc-card-desc">Complete reference for every field in the target manifest — name, version, entrypoints, schemas, threat model, and test vectors.</div>
         <div class="doc-card-arrow">→</div>
       </a>
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="#cli">
         <div class="doc-card-tag">CLI Reference</div>
         <div class="doc-card-title">All Commands &amp; Flags</div>
         <div class="doc-card-desc">Full CLI reference — <code style="font-family:var(--mono);font-size:11px;">validate</code>, <code style="font-family:var(--mono);font-size:11px;">prove-wallet</code>, all flags, output formats, and exit codes.</div>
         <div class="doc-card-arrow">→</div>
       </a>
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="#networks">
         <div class="doc-card-tag">Networks</div>
         <div class="doc-card-title">Pharos Network Configuration</div>
         <div class="doc-card-desc">Chain IDs, RPC endpoints, explorer URLs, and how to add custom networks to the network config.</div>
         <div class="doc-card-arrow">→</div>
       </a>
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="#wallet-proof">
         <div class="doc-card-tag">Wallet Proof</div>
         <div class="doc-card-title">Prove Live Execution</div>
         <div class="doc-card-desc">Step-by-step guide to signing and broadcasting a zero-value proof transaction on testnet and mainnet.</div>
         <div class="doc-card-arrow">→</div>
       </a>
-      <a class="doc-card" href="#">
+      <a class="doc-card" href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">
         <div class="doc-card-tag">Extending</div>
         <div class="doc-card-title">Add Custom Checks</div>
         <div class="doc-card-desc">How to add new validation checks to the engine, write tests for them, and integrate CallQuarry into your own agent pipeline.</div>
@@ -1706,7 +1750,7 @@
   <div class="footer-inner">
     <div class="footer-top">
       <div class="footer-brand">
-        <a class="nav-logo" href="#">
+        <a class="nav-logo" href="#top">
           <span class="logo-mark">
             <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M16 4L28 16L16 28L4 16Z" stroke="#E8C840" stroke-width="1.5" fill="none"/>
@@ -1732,10 +1776,10 @@
       <div class="footer-col">
         <div class="footer-col-title">Docs</div>
         <ul>
-          <li><a href="#docs">Getting Started</a></li>
+          <li><a href="https://github.com/comzzy-comzzy/callquarry#install" target="_blank" rel="noopener">Getting Started</a></li>
           <li><a href="#manifest">Manifest Guide</a></li>
-          <li><a href="#docs">Wallet Proof</a></li>
-          <li><a href="#docs">Extending</a></li>
+          <li><a href="#wallet-proof">Wallet Proof</a></li>
+          <li><a href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">Extending</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1750,8 +1794,8 @@
     <div class="footer-bottom">
       <span class="footer-copy">© 2026 CallQuarry. Built on Pharos.</span>
       <div class="footer-links">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
+        <a href="https://github.com/comzzy-comzzy/callquarry#safety-first" target="_blank" rel="noopener">Safety</a>
+        <a href="https://github.com/comzzy-comzzy/callquarry/issues" target="_blank" rel="noopener">Issues</a>
         <a href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">GitHub</a>
       </div>
     </div>
@@ -2256,6 +2300,35 @@
     document.getElementById('broadcastWalletBtn').addEventListener('click', () => runWalletProof({ broadcast: true }));
   }
 
+  function initMobileMenu() {
+    const menuButton = document.getElementById('mobileMenuButton');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (!menuButton || !mobileMenu) return;
+
+    const setOpen = (open) => {
+      menuButton.classList.toggle('active', open);
+      mobileMenu.classList.toggle('open', open);
+      menuButton.setAttribute('aria-expanded', String(open));
+      menuButton.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    };
+
+    menuButton.addEventListener('click', () => {
+      setOpen(!mobileMenu.classList.contains('open'));
+    });
+
+    mobileMenu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => setOpen(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 640) setOpen(false);
+    });
+  }
+
   // Scroll reveal
   const reveals = document.querySelectorAll('.scroll-reveal');
   const io = new IntersectionObserver((entries) => {
@@ -2306,6 +2379,7 @@
   const scoreSection = document.getElementById('scoring');
   if (scoreSection) rippleIO.observe(scoreSection);
 
+  initMobileMenu();
   initWorkbench();
 </script>
 </body>
