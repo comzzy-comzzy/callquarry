@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CallQuarry | Skill Validation for Pharos Agents</title>
+  <meta name="description" content="CallQuarry is a reusable multi-skill validation harness for Pharos Agent Carnival Skill submissions. Validate manifests, scan prompts, probe networks, prove wallets." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --yellow: #E8C840;
+      --yellow-bright: #F5D940;
+      --yellow-pale: #FDF6C3;
+      --yellow-glow: rgba(232, 200, 64, 0.18);
+      --yellow-glow-strong: rgba(232, 200, 64, 0.35);
+      --bg: #F7F7F5;
+      --bg-section: #F2F2EF;
+      --dot-color: rgba(0,0,0,0.10);
+      --text-primary: #0D0D0D;
+      --text-secondary: #444444;
+      --text-muted: #888888;
+      --border: rgba(0,0,0,0.10);
+      --mono: 'Space Mono', monospace;
+      --display: 'Space Grotesk', sans-serif;
+      --body: 'Inter', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── DOT GRID TEXTURE ── */
+    .dot-bg {
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    /* ── ANNOUNCEMENT BAR ── */
+    .announce-bar {
+      background: var(--yellow);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      z-index: 100;
+    }
+    .announce-bar .pill {
+      background: #000;
+      color: var(--yellow);
+      border-radius: 20px;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .announce-bar a { color: #000; text-decoration: underline; text-underline-offset: 3px; }
+    .announce-close {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 16px; color: #000; line-height: 1;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 90;
+      background: rgba(247,247,245,0.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--text-primary);
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      position: relative; flex-shrink: 0;
+    }
+    .logo-mark svg { width: 100%; height: 100%; }
+    .nav-links {
+      display: flex; align-items: center; gap: 24px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-secondary);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+    .nav-cta {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: var(--text-primary); color: var(--bg);
+      border: none; border-radius: 6px;
+      padding: 8px 16px; cursor: pointer; text-decoration: none;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: #222; }
+    .nav-hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; border: none; cursor: pointer; padding: 4px;
+    }
+    .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--text-primary); border-radius: 2px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100svh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 80px 28px 60px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .hero-eyebrow span { color: var(--yellow); }
+    .hero h1 {
+      font-family: var(--display); font-weight: 700;
+      font-size: clamp(38px, 9vw, 80px);
+      line-height: 1.05; letter-spacing: -0.02em;
+      max-width: 720px;
+      margin-bottom: 24px;
+    }
+    .hero h1 em { font-style: italic; font-weight: 400; }
+    .hero-sub {
+      font-size: 16px; line-height: 1.65;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin-bottom: 36px;
+    }
+    .hero-actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .btn-primary {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--text-primary); color: var(--bg);
+      border: none; border-radius: 50px;
+      padding: 13px 28px; cursor: pointer; text-decoration: none;
+      transition: transform 0.15s, background 0.2s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: #222; transform: translateY(-1px); }
+    .btn-outline {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent; color: var(--text-primary);
+      border: 1.5px solid var(--border);
+      border-radius: 50px;
+      padding: 13px 28px; cursor: pointer; text-decoration: none;
+      transition: border-color 0.2s, transform 0.15s;
+      display: inline-block;
+    }
+    .btn-outline:hover { border-color: #888; transform: translateY(-1px); }
+
+    /* Hero visual */
+    .hero-visual {
+      position: absolute; right: -40px; top: 50%;
+      transform: translateY(-50%);
+      width: min(520px, 55vw);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    .hero-visual svg { width: 100%; height: auto; }
+
+    /* Hero stats */
+    .hero-stats {
+      display: flex; gap: 36px; flex-wrap: wrap;
+      margin-top: 56px;
+      padding-top: 36px;
+      border-top: 1px solid var(--border);
+      width: 100%;
+    }
+    .stat-item {}
+    .stat-num {
+      font-family: var(--display); font-size: 28px; font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1;
+      color: var(--text-primary);
+    }
+    .stat-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* ── SECTION COMMON ── */
+    section { position: relative; }
+    .section-inner {
+      max-width: 1100px; margin: 0 auto;
+      padding: 100px 28px;
+    }
+    .section-eyebrow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .section-eyebrow::before { content: '// '; color: var(--yellow); }
+    .section-title {
+      font-family: var(--display); font-weight: 700;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1.1; letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .section-title em { font-style: italic; font-weight: 400; }
+    .section-body {
+      font-size: 16px; line-height: 1.7;
+      color: var(--text-secondary);
+      max-width: 520px;
+    }
+
+    /* ── PERFORMANCE SECTION ── */
+    .perf-section {
+      background: var(--bg);
+    }
+    .perf-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .perf-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+    .perf-visual {
+      display: flex; justify-content: center; align-items: center;
+      position: relative;
+    }
+    .diamond-wrap {
+      position: relative; width: 280px; height: 280px;
+    }
+    .diamond-wrap svg { width: 100%; height: 100%; }
+    /* Corner brackets */
+    .bracket-tl, .bracket-br {
+      position: absolute; width: 18px; height: 18px;
+    }
+    .bracket-tl { top: 0; left: 0; border-top: 1.5px solid var(--text-muted); border-left: 1.5px solid var(--text-muted); }
+    .bracket-br { bottom: 0; right: 0; border-bottom: 1.5px solid var(--text-muted); border-right: 1.5px solid var(--text-muted); }
+    .perf-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-top: 20px; text-align: center;
+    }
+
+    /* ── CHECKS SECTION ── */
+    .checks-section { background: var(--bg-section); }
+    .checks-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 56px;
+    }
+    .check-card {
+      background: var(--bg);
+      padding: 32px 28px;
+      transition: background 0.2s;
+      position: relative;
+    }
+    .check-card:hover { background: #FAFAF8; }
+    .check-icon {
+      width: 36px; height: 36px;
+      background: var(--yellow-glow);
+      border: 1px solid rgba(232,200,64,0.3);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+    .check-num {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      color: var(--yellow); margin-bottom: 8px;
+    }
+    .check-title {
+      font-family: var(--display); font-weight: 600; font-size: 16px;
+      margin-bottom: 8px; line-height: 1.3;
+    }
+    .check-desc {
+      font-size: 13px; line-height: 1.6; color: var(--text-secondary);
+    }
+
+    /* ── SCORE VISUAL SECTION ── */
+    .score-section { background: var(--bg); }
+    .score-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .score-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 80px; align-items: center;
+    }
+    .score-visual {
+      position: relative; display: flex; justify-content: center;
+    }
+    .radar-wrap {
+      position: relative; width: 300px; height: 300px;
+    }
+    .radar-wrap svg { width: 100%; height: 100%; }
+    .radar-label {
+      position: absolute;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-secondary);
+    }
+    .rl-top    { top: -18px; left: 50%; transform: translateX(-50%); }
+    .rl-bl     { bottom: 8px; left: -10px; }
+    .rl-br     { bottom: 8px; right: -10px; }
+    .score-legend {
+      display: flex; flex-direction: column; gap: 14px;
+      margin-top: 36px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .legend-text { font-size: 13px; color: var(--text-secondary); }
+    .legend-text strong { font-weight: 600; color: var(--text-primary); }
+
+    /* ── CLI SECTION ── */
+    .cli-section { background: var(--bg-section); }
+    .cli-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .cli-window {
+      background: #0D0D0D;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 48px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .cli-titlebar {
+      background: #1A1A1A;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .cli-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .cli-dot.red { background: #FF5F57; }
+    .cli-dot.yellow { background: #FEBC2E; }
+    .cli-dot.green { background: #28C840; }
+    .cli-label {
+      margin-left: auto;
+      font-family: var(--mono); font-size: 11px; color: #555; letter-spacing: 0.06em;
+    }
+    .cli-body { padding: 24px 20px; }
+    .cli-line {
+      font-family: var(--mono); font-size: 13px; line-height: 2;
+    }
+    .cli-prompt { color: var(--yellow); }
+    .cli-cmd { color: #E8E8E8; }
+    .cli-flag { color: #88BBFF; }
+    .cli-path { color: #88DDAA; }
+    .cli-comment { color: #555; }
+    .cli-out-pass { color: #28C840; }
+    .cli-out-warn { color: #FEBC2E; }
+    .cli-out-fail { color: #FF5F57; }
+    .cli-out-skip { color: #888; }
+    .cli-out-label { color: #AAA; }
+    .cli-separator { height: 1px; background: #222; margin: 12px 0; }
+
+    /* ── NETWORKS SECTION ── */
+    .networks-section { background: var(--bg); }
+    .networks-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .networks-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 80px; align-items: center;
+    }
+    .network-cards {
+      display: flex; flex-direction: column; gap: 1px;
+      background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    }
+    .network-card {
+      background: var(--bg); padding: 22px 24px;
+      display: flex; align-items: center; gap: 16px;
+      transition: background 0.2s;
+    }
+    .network-card:hover { background: #FAFAF8; }
+    .network-indicator {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .indicator-live { background: #28C840; color: #28C840; }
+    .indicator-test { background: var(--yellow); color: var(--yellow); }
+    .indicator-legacy { background: #888; color: #888; }
+    .network-info { flex: 1; }
+    .network-name {
+      font-family: var(--display); font-weight: 600; font-size: 14px;
+      margin-bottom: 3px;
+    }
+    .network-meta {
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+    .network-badge {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px; border-radius: 20px;
+    }
+    .badge-live { background: rgba(40,200,64,0.1); color: #28C840; }
+    .badge-test { background: var(--yellow-glow); color: #9A8000; }
+    .badge-legacy { background: rgba(0,0,0,0.05); color: #888; }
+
+    /* ── DOCS SECTION ── */
+    .docs-section { background: var(--bg-section); }
+    .docs-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .docs-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px; margin-top: 48px;
+    }
+    .doc-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      display: block;
+    }
+    .doc-card:hover {
+      border-color: var(--yellow);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--yellow-glow);
+    }
+    .doc-card-tag {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .doc-card-title {
+      font-family: var(--display); font-weight: 600; font-size: 16px;
+      margin-bottom: 8px; line-height: 1.3;
+    }
+    .doc-card-desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+    }
+    .doc-card-arrow {
+      margin-top: 20px; font-size: 18px; color: var(--text-muted);
+      transition: transform 0.2s, color 0.2s;
+    }
+    .doc-card:hover .doc-card-arrow { transform: translateX(4px); color: var(--text-primary); }
+
+    /* ── MANIFEST SECTION ── */
+    .manifest-section { background: var(--bg); }
+    .manifest-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .manifest-layout {
+      display: grid; grid-template-columns: 1fr 1.2fr;
+      gap: 60px; align-items: start;
+    }
+    .json-block {
+      background: #0D0D0D;
+      border-radius: 12px; overflow: hidden;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.12);
+    }
+    .json-titlebar {
+      background: #1A1A1A; padding: 10px 14px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .json-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .json-dot.r { background: #FF5F57; }
+    .json-dot.y { background: #FEBC2E; }
+    .json-dot.g { background: #28C840; }
+    .json-file { font-family: var(--mono); font-size: 11px; color: #555; margin-left: auto; letter-spacing: 0.05em; }
+    .json-body { padding: 20px; font-family: var(--mono); font-size: 12px; line-height: 1.8; }
+    .jk { color: #88BBFF; }
+    .jv { color: #88DDAA; }
+    .js { color: #FFB866; }
+    .jb { color: #FF88CC; }
+    .jc { color: #555; }
+
+    /* ── SAFETY SECTION ── */
+    .safety-section { background: var(--bg-section); }
+    .safety-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .safety-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+    .safety-list {
+      display: flex; flex-direction: column; gap: 16px;
+      margin-top: 32px;
+    }
+    .safety-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 16px 18px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      transition: border-color 0.2s;
+    }
+    .safety-item:hover { border-color: var(--yellow); }
+
+    .safety-text {}
+    .safety-label {
+      font-family: var(--display); font-weight: 600; font-size: 14px; margin-bottom: 3px;
+    }
+    .safety-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+    .safe-cmd-block {
+      background: #0D0D0D; border-radius: 10px; overflow: hidden;
+    }
+    .safe-cmd-header {
+      background: #1A1A1A; padding: 10px 14px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .safe-cmd-header .safe { color: #28C840; }
+    .safe-cmd-header .unsafe { color: #FF5F57; }
+    .safe-cmd-body { padding: 16px 14px; }
+    .safe-cmd-group { margin-bottom: 14px; }
+    .safe-cmd-group:last-child { margin-bottom: 0; }
+    .safe-cmd-sublabel {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .safe-cmd-line {
+      font-family: var(--mono); font-size: 12px; color: #888; line-height: 1.8;
+    }
+    .safe-cmd-line.safe-line { color: #88DDAA; }
+    .safe-cmd-line.unsafe-line { color: #FF8888; }
+
+    /* -- WORKBENCH -- */
+    .workbench-section { background: var(--bg); }
+    .workbench-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .workbench-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 20px;
+      margin-top: 44px;
+      align-items: start;
+    }
+    .workbench-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+    }
+    .workbench-panel.dark {
+      background: #0D0D0D;
+      color: #E8E8E8;
+      border-color: rgba(255,255,255,0.08);
+    }
+    .workbench-head {
+      min-height: 46px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .workbench-panel.dark .workbench-head {
+      border-bottom-color: rgba(255,255,255,0.08);
+      background: #1A1A1A;
+    }
+    .workbench-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .workbench-panel.dark .workbench-title { color: rgba(255,255,255,0.55); }
+    .workbench-body { padding: 16px; }
+    .workbench-label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .workbench-textarea {
+      width: 100%;
+      min-height: 360px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #101010;
+      color: #E8E8E8;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+      outline: none;
+    }
+    .workbench-textarea:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px var(--yellow-glow);
+    }
+    .workbench-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .workbench-btn {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.2s, background 0.2s;
+    }
+    .workbench-btn:hover { transform: translateY(-1px); border-color: var(--yellow); }
+    .workbench-btn.primary { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
+    .workbench-btn.yellow { background: var(--yellow); color: #000; border-color: var(--yellow); font-weight: 700; }
+    .workbench-btn.danger { background: #2A1111; color: #FFB0B0; border-color: rgba(255,95,87,0.45); }
+    .workbench-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .workbench-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .workbench-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .workbench-check input {
+      accent-color: var(--yellow);
+      width: 15px;
+      height: 15px;
+    }
+    .workbench-select {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text-primary);
+      padding: 0 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .summary-tile {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px 10px;
+      background: rgba(255,255,255,0.03);
+      min-height: 76px;
+    }
+    .summary-num {
+      font-family: var(--display);
+      font-size: 24px;
+      line-height: 1;
+      color: #fff;
+      font-weight: 700;
+    }
+    .summary-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      margin-top: 8px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.65);
+    }
+    .status-pill.ready { background: rgba(40,200,64,0.12); color: #88DDAA; }
+    .status-pill.review { background: rgba(232,200,64,0.14); color: var(--yellow); }
+    .status-pill.blocked { background: rgba(255,95,87,0.14); color: #FF9A94; }
+    .report-list {
+      margin-top: 14px;
+      max-height: 420px;
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+    }
+    .report-item {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .report-item:last-child { border-bottom: none; }
+    .report-tag {
+      align-self: start;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 4px 7px;
+      text-align: center;
+    }
+    .report-tag.pass { background: rgba(40,200,64,0.12); color: #88DDAA; }
+    .report-tag.warn { background: rgba(232,200,64,0.14); color: var(--yellow); }
+    .report-tag.fail { background: rgba(255,95,87,0.14); color: #FF9A94; }
+    .report-tag.skip { background: rgba(255,255,255,0.08); color: #AAA; }
+    .report-title {
+      font-family: var(--display);
+      font-size: 14px;
+      line-height: 1.25;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .report-detail {
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(255,255,255,0.55);
+      overflow-wrap: anywhere;
+    }
+    .wallet-panel {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .wallet-address {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.04);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow-wrap: anywhere;
+    }
+    .workbench-note {
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-muted);
+    }
+    @media (max-width: 900px) {
+      .workbench-grid { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .report-item { grid-template-columns: 1fr; }
+      .workbench-textarea { min-height: 300px; }
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--text-primary);
+      position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+    .cta-glow {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, var(--yellow-glow-strong) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-inner {
+      max-width: 800px; margin: 0 auto;
+      padding: 120px 28px;
+      text-align: center; position: relative;
+    }
+    .cta-inner .section-eyebrow { color: rgba(255,255,255,0.4); }
+    .cta-inner .section-eyebrow::before { color: var(--yellow); }
+    .cta-title {
+      font-family: var(--display); font-weight: 700;
+      font-size: clamp(30px, 6vw, 56px);
+      line-height: 1.08; letter-spacing: -0.02em;
+      color: #fff; margin-bottom: 20px;
+    }
+    .cta-title em { font-style: italic; font-weight: 400; color: var(--yellow); }
+    .cta-sub {
+      font-size: 16px; line-height: 1.6; color: rgba(255,255,255,0.55);
+      max-width: 460px; margin: 0 auto 40px;
+    }
+    .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-yellow {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--yellow); color: #000;
+      border: none; border-radius: 50px;
+      padding: 13px 28px; cursor: pointer; text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.2s;
+      display: inline-block; font-weight: 700;
+    }
+    .btn-yellow:hover { transform: translateY(-1px); box-shadow: 0 8px 28px var(--yellow-glow-strong); }
+    .btn-ghost {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent; color: rgba(255,255,255,0.7);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 50px;
+      padding: 13px 28px; cursor: pointer; text-decoration: none;
+      transition: border-color 0.2s, color 0.2s, transform 0.15s;
+      display: inline-block;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.5); color: #fff; transform: translateY(-1px); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--text-primary);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 48px 28px 32px;
+    }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-top {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 40px; margin-bottom: 48px;
+    }
+    .footer-brand .nav-logo { color: #fff; margin-bottom: 14px; }
+    .footer-tagline {
+      font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.6; max-width: 240px;
+    }
+    .footer-col-title {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: rgba(255,255,255,0.35);
+      margin-bottom: 16px;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul a {
+      font-size: 13px; color: rgba(255,255,255,0.55);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .footer-col ul a:hover { color: #fff; }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08);
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); font-family: var(--mono); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 12px; color: rgba(255,255,255,0.3); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: rgba(255,255,255,0.6); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50%       { transform: translateY(-10px) rotate(1deg); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.5; }
+      50%       { opacity: 1; }
+    }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes ripple {
+      0%   { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    @keyframes scan-line {
+      from { transform: translateY(-100%); }
+      to   { transform: translateY(400%); }
+    }
+
+    .hero-anim { animation: fadeUp 0.8s ease both; }
+    .hero-anim-1 { animation-delay: 0.1s; }
+    .hero-anim-2 { animation-delay: 0.22s; }
+    .hero-anim-3 { animation-delay: 0.34s; }
+    .hero-anim-4 { animation-delay: 0.46s; }
+
+    .float-anim { animation: float 6s ease-in-out infinite; }
+
+    .scroll-reveal {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Ripple circles on score visual */
+    .ripple-ring {
+      animation: ripple 2.5s ease-out infinite;
+    }
+    .ripple-ring:nth-child(2) { animation-delay: 0.8s; }
+    .ripple-ring:nth-child(3) { animation-delay: 1.6s; }
+
+    /* Scanning line on CLI */
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--yellow), transparent);
+      opacity: 0.15; pointer-events: none;
+      animation: scan-line 3s linear infinite;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero-visual { display: none; }
+      .perf-layout, .score-layout, .networks-layout, .manifest-layout, .safety-layout { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .section-inner { padding: 72px 20px; }
+      .hero { padding: 72px 20px 48px; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .hero-stats { gap: 24px; }
+      .footer-top { grid-template-columns: 1fr; }
+      .perf-visual { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── ANNOUNCE BAR ── -->
+<div class="announce-bar" id="announceBar">
+  <span class="pill">New</span>
+  <a href="#docs">CallQuarry v0.2.0 — Pharos Mainnet &amp; Atlantic Testnet supported</a>
+  <button class="announce-close" onclick="document.getElementById('announceBar').remove()" aria-label="Close">×</button>
+</div>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <span class="logo-mark">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- CallQuarry logo: a diamond/quarry shape with a scan line -->
+        <!-- Outer diamond -->
+        <path d="M16 4L28 16L16 28L4 16Z" stroke="#E8C840" stroke-width="1.5" fill="none"/>
+        <!-- Inner square rotated -->
+        <rect x="10" y="10" width="12" height="12" stroke="#E8C840" stroke-width="1" fill="none" stroke-dasharray="2 2"/>
+        <!-- Center dot -->
+        <circle cx="16" cy="16" r="2" fill="#E8C840"/>
+        <!-- Scan tick marks -->
+        <line x1="16" y1="4" x2="16" y2="7" stroke="#E8C840" stroke-width="1.5"/>
+        <line x1="28" y1="16" x2="25" y2="16" stroke="#E8C840" stroke-width="1.5"/>
+      </svg>
+    </span>
+    CallQuarry
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#workbench">Workbench</a></li>
+    <li><a href="#networks">Networks</a></li>
+    <li><a href="#cli">CLI</a></li>
+    <li><a href="#docs">Docs</a></li>
+    <li><a href="#manifest">Manifest</a></li>
+  </ul>
+  <a class="nav-cta" href="#workbench">Launch</a>
+  <button class="nav-hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero dot-bg">
+  <p class="hero-eyebrow hero-anim hero-anim-1"><span>Pharos Agent Carnival</span> — Skill Validator</p>
+  <h1 class="hero-anim hero-anim-2">
+    Validate.<br><em>Prove.</em><br>Ship.
+  </h1>
+  <p class="hero-sub hero-anim hero-anim-3">
+    CallQuarry checks every layer of your Skill before it touches production. Manifest shape, prompt safety, RPC compatibility, gas simulation, wallet proof — in one deterministic harness.
+  </p>
+  <div class="hero-actions hero-anim hero-anim-4">
+    <a class="btn-primary" href="#workbench">Open Workbench</a>
+    <a class="btn-outline" href="#features">See What It Checks</a>
+  </div>
+
+  <!-- Hero visual -->
+  <div class="hero-visual float-anim">
+    <svg viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="hg1" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#E8C840" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#E8C840" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="hg2" cx="40%" cy="60%" r="50%">
+          <stop offset="0%" stop-color="#88BBFF" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#88BBFF" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="hg3" cx="60%" cy="40%" r="45%">
+          <stop offset="0%" stop-color="#88DDAA" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#88DDAA" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <!-- Glow blobs -->
+      <ellipse cx="240" cy="240" rx="200" ry="200" fill="url(#hg1)"/>
+      <ellipse cx="180" cy="280" rx="160" ry="160" fill="url(#hg2)"/>
+      <ellipse cx="300" cy="180" rx="140" ry="140" fill="url(#hg3)"/>
+      <!-- Outer diamond solid -->
+      <path d="M240 40L440 240L240 440L40 240Z" stroke="#0D0D0D" stroke-width="1.5" fill="none"/>
+      <!-- Outer diamond dashed -->
+      <path d="M240 80L400 240L240 400L80 240Z" stroke="#0D0D0D" stroke-width="1" fill="none" stroke-dasharray="5 4"/>
+      <!-- Inner square -->
+      <rect x="140" y="140" width="200" height="200" stroke="#0D0D0D" stroke-width="1.5" fill="none"/>
+      <!-- Inner square dashed -->
+      <rect x="160" y="160" width="160" height="160" stroke="#0D0D0D" stroke-width="0.8" fill="none" stroke-dasharray="4 4"/>
+      <!-- Corner brackets outer -->
+      <path d="M40 220L40 240L60 240" stroke="#888" stroke-width="1"/>
+      <path d="M440 260L440 240L420 240" stroke="#888" stroke-width="1"/>
+      <!-- Scan reticle -->
+      <circle cx="240" cy="240" r="28" stroke="#E8C840" stroke-width="1.5" fill="none"/>
+      <circle cx="240" cy="240" r="6" fill="#E8C840"/>
+      <line x1="240" y1="200" x2="240" y2="218" stroke="#E8C840" stroke-width="1"/>
+      <line x1="240" y1="262" x2="240" y2="280" stroke="#E8C840" stroke-width="1"/>
+      <line x1="200" y1="240" x2="218" y2="240" stroke="#E8C840" stroke-width="1"/>
+      <line x1="262" y1="240" x2="280" y2="240" stroke="#E8C840" stroke-width="1"/>
+      <!-- Data labels -->
+      <text x="252" y="90" font-family="Space Mono" font-size="9" fill="#888" letter-spacing="1">MANIFEST</text>
+      <line x1="248" y1="92" x2="240" y2="100" stroke="#888" stroke-width="0.8"/>
+      <text x="360" y="200" font-family="Space Mono" font-size="9" fill="#888" letter-spacing="1">RPC</text>
+      <line x1="370" y1="202" x2="360" y2="220" stroke="#888" stroke-width="0.8"/>
+      <text x="40" y="300" font-family="Space Mono" font-size="9" fill="#888" letter-spacing="1">PROMPT</text>
+      <line x1="80" y1="298" x2="110" y2="280" stroke="#888" stroke-width="0.8"/>
+      <text x="190" y="420" font-family="Space Mono" font-size="9" fill="#888" letter-spacing="1">WALLET</text>
+      <line x1="210" y1="412" x2="230" y2="395" stroke="#888" stroke-width="0.8"/>
+    </svg>
+  </div>
+
+  <div class="hero-stats hero-anim hero-anim-4">
+    <div class="stat-item">
+      <div class="stat-num">8</div>
+      <div class="stat-label">Validation Checks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">100</div>
+      <div class="stat-label">Max Score</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">0</div>
+      <div class="stat-label">Dependencies (core)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">2</div>
+      <div class="stat-label">Networks Supported</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PERFORMANCE / WHAT IT DOES ── -->
+<section class="perf-section" id="features">
+  <div class="section-inner">
+    <div class="perf-layout">
+      <div>
+        <p class="section-eyebrow scroll-reveal">Performance</p>
+        <h2 class="section-title scroll-reveal">Validate.<br><em>Not guess.</em></h2>
+        <p class="section-body scroll-reveal">
+          CallQuarry runs every Skill through a scored pipeline before it reaches a judge or a production agent. Offline-first, read-only by default, and explicit about anything that touches real funds.
+        </p>
+        <a class="btn-outline scroll-reveal" href="#cli" style="margin-top:28px; display:inline-block;">Read the Documentation</a>
+      </div>
+      <div class="perf-visual scroll-reveal">
+        <div>
+          <div class="diamond-wrap">
+            <div class="bracket-tl"></div>
+            <div class="bracket-br"></div>
+            <svg viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="pg1" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#E8C840" stop-opacity="0.35"/>
+                  <stop offset="50%" stop-color="#88BBFF" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#88DDAA" stop-opacity="0.1"/>
+                </radialGradient>
+              </defs>
+              <ellipse cx="140" cy="140" rx="110" ry="110" fill="url(#pg1)"/>
+              <path d="M140 20L260 140L140 260L20 140Z" stroke="#0D0D0D" stroke-width="1.5" fill="none"/>
+              <path d="M140 60L220 140L140 220L60 140Z" stroke="#0D0D0D" stroke-width="1" fill="none" stroke-dasharray="4 3"/>
+              <rect x="90" y="90" width="100" height="100" stroke="#0D0D0D" stroke-width="1.5" fill="none"/>
+              <rect x="106" y="106" width="68" height="68" stroke="#0D0D0D" stroke-width="0.8" fill="none" stroke-dasharray="3 3"/>
+              <circle cx="140" cy="140" r="7" fill="#E8C840"/>
+              <line x1="140" y1="113" x2="140" y2="127" stroke="#E8C840" stroke-width="1.2"/>
+              <line x1="140" y1="153" x2="140" y2="167" stroke="#E8C840" stroke-width="1.2"/>
+              <line x1="113" y1="140" x2="127" y2="140" stroke="#E8C840" stroke-width="1.2"/>
+              <line x1="153" y1="140" x2="167" y2="140" stroke="#E8C840" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <p class="perf-label">// Validation Engine</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 8 CHECKS ── -->
+<section class="checks-section">
+  <div class="section-inner">
+    <p class="section-eyebrow scroll-reveal">What CallQuarry Checks</p>
+    <h2 class="section-title scroll-reveal">Eight layers.<br><em>One report.</em></h2>
+    <div class="checks-grid scroll-reveal">
+      <div class="check-card">
+        <div class="check-num">01</div>
+        <div class="check-title">Manifest Linting</div>
+        <div class="check-desc">Validates Skill name, version, description, network declarations, entrypoints, and threat model shape against strict rules.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">02</div>
+        <div class="check-title">Prompt Attack Scanning</div>
+        <div class="check-desc">Detects instruction-override phrases, secret-exfiltration patterns, jailbreak wording, and hidden-output directives embedded in prompts or descriptions.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">03</div>
+        <div class="check-title">Test Vector Validation</div>
+        <div class="check-desc">Runs sample inputs through each entrypoint's declared JSON Schema to confirm they match before any live execution.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">04</div>
+        <div class="check-title">Pharos RPC Probing</div>
+        <div class="check-desc">Verifies RPC endpoints, confirms chain IDs, reads block height and gas price for Pharos Mainnet and Atlantic Testnet.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">05</div>
+        <div class="check-title">Read-Call Simulation</div>
+        <div class="check-desc">Executes declared JSON-RPC read probes — <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;">eth_getBalance</code>, <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;">eth_call</code> — without signing or spending.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">06</div>
+        <div class="check-title">Gas Dry-Run</div>
+        <div class="check-desc">Runs <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;">eth_estimateGas</code> for declared transaction simulations. No signing, no broadcasting, no gas spent.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">07</div>
+        <div class="check-title">Wallet Proof Mode</div>
+        <div class="check-desc">Optionally signs a zero-value self-transfer on testnet or mainnet. Broadcast requires two explicit confirmation flags.</div>
+      </div>
+      <div class="check-card">
+        <div class="check-num">08</div>
+        <div class="check-title">Readiness Report</div>
+        <div class="check-desc">Produces a scored JSON or text report — 100 points minus deductions per fail, warn, or skip — with a final status of <em>ready</em>, <em>needs-review</em>, or <em>blocked</em>.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SCORE VISUAL ── -->
+<section class="score-section" id="scoring">
+  <div class="section-inner">
+    <div class="score-layout">
+      <div class="score-visual scroll-reveal">
+        <div>
+          <div class="radar-wrap">
+            <span class="radar-label rl-top">Security</span>
+            <span class="radar-label rl-bl">Manifest</span>
+            <span class="radar-label rl-br">Network</span>
+            <svg viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="rg1" cx="50%" cy="45%" r="50%">
+                  <stop offset="0%" stop-color="#88BBFF" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#88BBFF" stop-opacity="0"/>
+                </radialGradient>
+                <radialGradient id="rg2" cx="35%" cy="65%" r="45%">
+                  <stop offset="0%" stop-color="#E8C840" stop-opacity="0.22"/>
+                  <stop offset="100%" stop-color="#E8C840" stop-opacity="0"/>
+                </radialGradient>
+                <radialGradient id="rg3" cx="65%" cy="65%" r="45%">
+                  <stop offset="0%" stop-color="#88DDAA" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#88DDAA" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <!-- Ripple bg -->
+              <circle class="ripple-ring" cx="150" cy="135" r="80" stroke="#88BBFF" stroke-width="1" fill="none" opacity="0.3"/>
+              <circle class="ripple-ring" cx="110" cy="185" r="80" stroke="#E8C840" stroke-width="1" fill="none" opacity="0.3"/>
+              <circle class="ripple-ring" cx="190" cy="185" r="80" stroke="#88DDAA" stroke-width="1" fill="none" opacity="0.3"/>
+              <!-- Glow fills -->
+              <ellipse cx="150" cy="135" rx="85" ry="85" fill="url(#rg1)"/>
+              <ellipse cx="110" cy="185" rx="80" ry="80" fill="url(#rg2)"/>
+              <ellipse cx="190" cy="185" rx="80" ry="80" fill="url(#rg3)"/>
+              <!-- Circle outlines -->
+              <circle cx="150" cy="135" r="85" stroke="#0D0D0D" stroke-width="1" fill="none"/>
+              <circle cx="110" cy="185" r="85" stroke="#0D0D0D" stroke-width="1" fill="none" stroke-dasharray="4 3"/>
+              <circle cx="190" cy="185" r="85" stroke="#0D0D0D" stroke-width="1" fill="none" stroke-dasharray="4 3"/>
+              <!-- Corner brackets -->
+              <path d="M10 175L10 190L25 190" stroke="#888" stroke-width="0.8"/>
+              <path d="M290 175L290 190L275 190" stroke="#888" stroke-width="0.8"/>
+            </svg>
+          </div>
+          <div class="score-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#88BBFF;"></div>
+              <div class="legend-text"><strong>Security</strong> — prompt scan, secret detection, threat model</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#E8C840;"></div>
+              <div class="legend-text"><strong>Manifest</strong> — shape, naming, entrypoints, schemas</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#88DDAA;"></div>
+              <div class="legend-text"><strong>Network</strong> — RPC probes, chain ID, gas price, reads</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-reveal">
+        <p class="section-eyebrow">Scoring</p>
+        <h2 class="section-title">Validate, not guess. <em>Score every layer.</em></h2>
+        <p class="section-body">
+          Every check contributes to a score from 0 to 100. Failures cost 18 points each. Warnings cost 6. Skips cost 2. The final status tells the agent — and the judge — exactly how ready a Skill is.
+        </p>
+        <div style="margin-top:32px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; gap:12px; font-family:var(--mono); font-size:12px;">
+            <span style="background:#28C840; color:#fff; padding:2px 9px; border-radius:20px; font-size:10px; letter-spacing:0.06em;">READY</span>
+            <span style="color:var(--text-secondary);">Zero failures, zero warnings</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; font-family:var(--mono); font-size:12px;">
+            <span style="background:#E8C840; color:#000; padding:2px 9px; border-radius:20px; font-size:10px; letter-spacing:0.06em;">NEEDS REVIEW</span>
+            <span style="color:var(--text-secondary);">Has warnings, no failures</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; font-family:var(--mono); font-size:12px;">
+            <span style="background:#FF5F57; color:#fff; padding:2px 9px; border-radius:20px; font-size:10px; letter-spacing:0.06em;">BLOCKED</span>
+            <span style="color:var(--text-secondary);">One or more failures</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CLI ── -->
+<section class="cli-section" id="cli">
+  <div class="section-inner">
+    <p class="section-eyebrow scroll-reveal">CLI</p>
+    <h2 class="section-title scroll-reveal">Two commands.<br><em>Full coverage.</em></h2>
+    <p class="section-body scroll-reveal" style="margin-bottom:0;">Run offline for instant schema checks, or live for full RPC validation. Wallet proof is always opt-in.</p>
+    <div class="cli-window scroll-reveal" style="position:relative; overflow:hidden;">
+      <div class="scan-line"></div>
+      <div class="cli-titlebar">
+        <div class="cli-dot red"></div>
+        <div class="cli-dot yellow"></div>
+        <div class="cli-dot green"></div>
+        <span class="cli-label">callquarry.mjs</span>
+      </div>
+      <div class="cli-body">
+        <div class="cli-line"><span class="cli-comment"># Step 1 — offline validation (no RPC needed)</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs validate</span> <span class="cli-flag">--manifest</span> <span class="cli-path">examples/pharos-balance-target.json</span> <span class="cli-flag">--offline</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">Status: ready</span>&nbsp;&nbsp;
+          <span class="cli-out-label">Score: 100/100</span>&nbsp;&nbsp;
+          <span class="cli-out-pass">0 failed</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Step 2 — live Pharos RPC check</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs validate</span> <span class="cli-flag">--manifest</span> <span class="cli-path">examples/pharos-balance-target.json</span> <span class="cli-flag">--networks</span> <span class="cli-path">pharos-mainnet,pharos-atlantic-testnet</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">Status: ready</span>&nbsp;&nbsp;
+          <span class="cli-out-label">Score: 100/100</span>&nbsp;&nbsp;
+          <span class="cli-out-pass">0 failed</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Step 3 — wallet dry proof (no gas spent)</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs prove-wallet</span> <span class="cli-flag">--network</span> <span class="cli-path">pharos-atlantic-testnet</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">Transaction signed</span>&nbsp;&nbsp;
+          <span class="cli-out-skip">Transaction broadcast skipped</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Step 4 — broadcast proof (testnet, spends gas)</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs prove-wallet</span> <span class="cli-flag">--network</span> <span class="cli-path">pharos-atlantic-testnet</span> <span class="cli-flag">--broadcast</span> <span class="cli-flag">--i-understand-this-spends-gas</span></div>
+        <div class="cli-line" style="padding-left:12px;">
+          <span class="cli-out-pass">Transaction broadcast</span>&nbsp;&nbsp;
+          <span class="cli-out-label">0x18dd2d9dd7367...</span>
+        </div>
+        <div class="cli-separator"></div>
+        <div class="cli-line"><span class="cli-comment"># Save a JSON report</span></div>
+        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">node scripts/callquarry.mjs validate</span> <span class="cli-flag">--manifest</span> <span class="cli-path">examples/pharos-balance-target.json</span> <span class="cli-flag">--format</span> <span class="cli-path">json</span> <span class="cli-flag">--out</span> <span class="cli-path">reports/report.json</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LIVE WORKBENCH ── -->
+<section class="workbench-section" id="workbench">
+  <div class="section-inner">
+    <p class="section-eyebrow scroll-reveal">Live Workbench</p>
+    <h2 class="section-title scroll-reveal">Run CallQuarry<br><em>in your browser.</em></h2>
+    <p class="section-body scroll-reveal">
+      Paste a target Skill manifest, run local checks, probe Pharos RPCs, connect a browser wallet, and export the same style of JSON report used by the CLI.
+    </p>
+
+    <div class="workbench-grid scroll-reveal">
+      <div class="workbench-panel">
+        <div class="workbench-head">
+          <div class="workbench-title">Target Manifest</div>
+          <button class="workbench-btn" id="loadExampleBtn" type="button">Load Example</button>
+        </div>
+        <div class="workbench-body">
+          <label class="workbench-label" for="manifestInput">Manifest JSON</label>
+          <textarea class="workbench-textarea" id="manifestInput" spellcheck="false"></textarea>
+          <div class="workbench-controls">
+            <button class="workbench-btn primary" id="offlineValidateBtn" type="button">Offline Validate</button>
+            <button class="workbench-btn yellow" id="liveValidateBtn" type="button">Live RPC Check</button>
+            <button class="workbench-btn" id="downloadReportBtn" type="button" disabled>Export Report</button>
+          </div>
+          <p class="workbench-note">
+            Offline validation never calls Pharos RPCs. Live validation calls public RPC methods only and does not need a wallet.
+          </p>
+
+          <div class="wallet-panel">
+            <div class="workbench-title">Wallet Proof</div>
+            <div class="workbench-row">
+              <select class="workbench-select" id="walletNetwork">
+                <option value="pharos-atlantic-testnet">Atlantic testnet</option>
+                <option value="pharos-mainnet">Mainnet</option>
+              </select>
+              <label class="workbench-check">
+                <input id="allowMainnetCheck" type="checkbox" />
+                allow mainnet
+              </label>
+              <label class="workbench-check">
+                <input id="gasConsentCheck" type="checkbox" />
+                I understand broadcast spends gas
+              </label>
+            </div>
+            <div class="workbench-controls">
+              <button class="workbench-btn" id="connectWalletBtn" type="button">Connect Wallet</button>
+              <button class="workbench-btn" id="dryWalletBtn" type="button" disabled>Dry Proof</button>
+              <button class="workbench-btn danger" id="broadcastWalletBtn" type="button" disabled>Broadcast Proof</button>
+            </div>
+            <div class="wallet-address" id="walletStatus">No wallet connected. Use MetaMask, Rabby, or another injected EVM wallet.</div>
+            <p class="workbench-note">
+              The website never asks for a private key. Wallet proof uses your browser wallet to sign or broadcast a zero-value self-transfer.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="workbench-panel dark">
+        <div class="workbench-head">
+          <div class="workbench-title">Report</div>
+          <span class="status-pill" id="statusPill">Idle</span>
+        </div>
+        <div class="workbench-body">
+          <div class="summary-grid">
+            <div class="summary-tile">
+              <div class="summary-num" id="scoreValue">--</div>
+              <div class="summary-label">Score</div>
+            </div>
+            <div class="summary-tile">
+              <div class="summary-num" id="passValue">0</div>
+              <div class="summary-label">Passed</div>
+            </div>
+            <div class="summary-tile">
+              <div class="summary-num" id="warnValue">0</div>
+              <div class="summary-label">Warnings</div>
+            </div>
+            <div class="summary-tile">
+              <div class="summary-num" id="failValue">0</div>
+              <div class="summary-label">Failed</div>
+            </div>
+          </div>
+          <div class="report-list" id="reportList">
+            <div class="report-item">
+              <div class="report-tag skip">idle</div>
+              <div>
+                <div class="report-title">No report yet</div>
+                <div class="report-detail">Load the example manifest or paste your own, then run offline validation.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── NETWORKS ── -->
+<section class="networks-section" id="networks">
+  <div class="section-inner">
+    <div class="networks-layout">
+      <div class="scroll-reveal">
+        <p class="section-eyebrow">Networks</p>
+        <h2 class="section-title">Pharos.<br><em>Both ends.</em></h2>
+        <p class="section-body">
+          CallQuarry ships with Pharos Mainnet, Atlantic Testnet, and Legacy Testnet pre-configured. Chain IDs are verified on every live check — not assumed.
+        </p>
+        <a class="btn-outline scroll-reveal" href="#docs" style="margin-top:28px; display:inline-block;">View Network Docs</a>
+      </div>
+      <div class="network-cards scroll-reveal">
+        <div class="network-card">
+          <div class="network-indicator indicator-live"></div>
+          <div class="network-info">
+            <div class="network-name">Pharos Mainnet</div>
+            <div class="network-meta">Chain ID 1672 · rpc.pharos.xyz</div>
+          </div>
+          <span class="network-badge badge-live">Live</span>
+        </div>
+        <div class="network-card">
+          <div class="network-indicator indicator-test"></div>
+          <div class="network-info">
+            <div class="network-name">Pharos Atlantic Testnet</div>
+            <div class="network-meta">Chain ID 688689 · atlantic.dplabs-internal.com</div>
+          </div>
+          <span class="network-badge badge-test">Testnet</span>
+        </div>
+        <div class="network-card">
+          <div class="network-indicator indicator-legacy"></div>
+          <div class="network-info">
+            <div class="network-name">Pharos Legacy Testnet</div>
+            <div class="network-meta">Chain ID 688688 · testnet.dplabs-internal.com</div>
+          </div>
+          <span class="network-badge badge-legacy">Legacy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MANIFEST STRUCTURE ── -->
+<section class="manifest-section" id="manifest">
+  <div class="section-inner">
+    <div class="manifest-layout">
+      <div class="scroll-reveal">
+        <p class="section-eyebrow">Target Manifest</p>
+        <h2 class="section-title">One JSON.<br><em>Full context.</em></h2>
+        <p class="section-body">
+          Every CallQuarry validation runs from a target manifest — a JSON file that describes your Skill's identity, networks, entrypoints, threat model, and test vectors. Start from the example and extend it.
+        </p>
+        <div style="margin-top:28px; display:flex; flex-direction:column; gap:10px;">
+          <div style="font-family:var(--mono); font-size:12px; color:var(--text-secondary);">
+            <span style="color:var(--yellow);">name</span> &nbsp;·&nbsp; lowercase hyphen-case, 3–63 chars
+          </div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--text-secondary);">
+            <span style="color:var(--yellow);">version</span> &nbsp;·&nbsp; semantic version e.g. 0.1.0
+          </div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--text-secondary);">
+            <span style="color:var(--yellow);">networks</span> &nbsp;·&nbsp; array of Pharos network IDs
+          </div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--text-secondary);">
+            <span style="color:var(--yellow);">entrypoints</span> &nbsp;·&nbsp; callable functions with schemas
+          </div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--text-secondary);">
+            <span style="color:var(--yellow);">threatModel</span> &nbsp;·&nbsp; permissions, writes, secrets
+          </div>
+        </div>
+      </div>
+      <div class="json-block scroll-reveal">
+        <div class="json-titlebar">
+          <div class="json-dot r"></div>
+          <div class="json-dot y"></div>
+          <div class="json-dot g"></div>
+          <span class="json-file">pharos-balance-target.json</span>
+        </div>
+        <div class="json-body">
+<pre style="white-space:pre-wrap;"><span class="jb">{</span>
+  <span class="jk">"name"</span><span style="color:#aaa">:</span> <span class="jv">"my-pharos-skill"</span><span style="color:#aaa">,</span>
+  <span class="jk">"version"</span><span style="color:#aaa">:</span> <span class="jv">"0.1.0"</span><span style="color:#aaa">,</span>
+  <span class="jk">"description"</span><span style="color:#aaa">:</span> <span class="jv">"Fetches native balance for a Pharos address."</span><span style="color:#aaa">,</span>
+  <span class="jk">"networks"</span><span style="color:#aaa">:</span> <span class="jb">[</span>
+    <span class="jv">"pharos-mainnet"</span><span style="color:#aaa">,</span>
+    <span class="jv">"pharos-atlantic-testnet"</span>
+  <span class="jb">]</span><span style="color:#aaa">,</span>
+  <span class="jk">"entrypoints"</span><span style="color:#aaa">:</span> <span class="jb">[</span><span class="jb">{</span>
+    <span class="jk">"id"</span><span style="color:#aaa">:</span> <span class="jv">"getBalance"</span><span style="color:#aaa">,</span>
+    <span class="jk">"type"</span><span style="color:#aaa">:</span> <span class="jv">"read"</span><span style="color:#aaa">,</span>
+    <span class="jk">"description"</span><span style="color:#aaa">:</span> <span class="jv">"Fetch native balance for address."</span><span style="color:#aaa">,</span>
+    <span class="jk">"inputSchema"</span><span style="color:#aaa">:</span> <span class="jb">{</span>
+      <span class="jk">"type"</span><span style="color:#aaa">:</span> <span class="jv">"object"</span><span style="color:#aaa">,</span>
+      <span class="jk">"required"</span><span style="color:#aaa">:</span> <span class="jb">[</span><span class="jv">"address"</span><span class="jb">]</span>
+    <span class="jb">}</span>
+  <span class="jb">}]</span><span style="color:#aaa">,</span>
+  <span class="jk">"threatModel"</span><span style="color:#aaa">:</span> <span class="jb">{</span>
+    <span class="jk">"permissions"</span><span style="color:#aaa">:</span> <span class="jb">[</span><span class="jv">"rpc-read"</span><span class="jb">]</span><span style="color:#aaa">,</span>
+    <span class="jk">"writes"</span><span style="color:#aaa">:</span> <span class="js">false</span><span style="color:#aaa">,</span>
+    <span class="jk">"secrets"</span><span style="color:#aaa">:</span> <span class="jb">[]</span>
+  <span class="jb">}</span>
+<span class="jb">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SAFETY ── -->
+<section class="safety-section">
+  <div class="section-inner">
+    <div class="safety-layout">
+      <div>
+        <p class="section-eyebrow scroll-reveal">Safety First</p>
+        <h2 class="section-title scroll-reveal">Read-only<br><em>by default.</em></h2>
+        <p class="section-body scroll-reveal">
+          The core validator never signs, never broadcasts, never spends gas. Wallet proof mode is an explicit opt-in with layered confirmation guards.
+        </p>
+        <div class="safety-list scroll-reveal">
+          <div class="safety-item">
+
+            <div class="safety-text">
+              <div class="safety-label">Never commit private keys</div>
+              <div class="safety-desc">Set <code style="font-family:var(--mono);font-size:11px;">PHAROS_PRIVATE_KEY</code> in your shell only. Never paste it into a manifest, README, or argument.</div>
+            </div>
+          </div>
+          <div class="safety-item">
+
+            <div class="safety-text">
+              <div class="safety-label">Explicit gas consent</div>
+              <div class="safety-desc">Broadcasting requires both <code style="font-family:var(--mono);font-size:11px;">--broadcast</code> and <code style="font-family:var(--mono);font-size:11px;">--i-understand-this-spends-gas</code>. Mainnet additionally requires <code style="font-family:var(--mono);font-size:11px;">--allow-mainnet</code>.</div>
+            </div>
+          </div>
+          <div class="safety-item">
+
+            <div class="safety-text">
+              <div class="safety-label">Offline-first</div>
+              <div class="safety-desc">Run <code style="font-family:var(--mono);font-size:11px;">--offline</code> for your first pass. Catches manifest, schema, and prompt issues without any network access.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-reveal">
+        <div class="safe-cmd-block">
+          <div class="safe-cmd-header">
+            <span class="safe">● Safe — no gas</span>
+          </div>
+          <div class="safe-cmd-body">
+            <div class="safe-cmd-group">
+              <div class="safe-cmd-line safe-line">npm run validate</div>
+              <div class="safe-cmd-line safe-line">npm run validate:live</div>
+              <div class="safe-cmd-line safe-line">node scripts/callquarry.mjs prove-wallet \</div>
+              <div class="safe-cmd-line safe-line" style="padding-left:16px;">--network pharos-atlantic-testnet</div>
+              <div class="safe-cmd-line safe-line">node scripts/callquarry.mjs prove-wallet \</div>
+              <div class="safe-cmd-line safe-line" style="padding-left:16px;">--network pharos-mainnet --allow-mainnet</div>
+            </div>
+          </div>
+        </div>
+        <div class="safe-cmd-block" style="margin-top:12px;">
+          <div class="safe-cmd-header">
+            <span class="unsafe">● Broadcasts — spends gas</span>
+          </div>
+          <div class="safe-cmd-body">
+            <div class="safe-cmd-group">
+              <div class="safe-cmd-line unsafe-line">node scripts/callquarry.mjs prove-wallet \</div>
+              <div class="safe-cmd-line unsafe-line" style="padding-left:16px;">--network pharos-atlantic-testnet \</div>
+              <div class="safe-cmd-line unsafe-line" style="padding-left:16px;">--broadcast --i-understand-this-spends-gas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── DOCS ── -->
+<section class="docs-section" id="docs">
+  <div class="section-inner">
+    <p class="section-eyebrow scroll-reveal">Documentation</p>
+    <h2 class="section-title scroll-reveal">Everything you need<br><em>to ship.</em></h2>
+    <div class="docs-grid scroll-reveal">
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">Getting Started</div>
+        <div class="doc-card-title">Install &amp; Run Your First Validation</div>
+        <div class="doc-card-desc">Clone the repo, install dependencies, and run your first offline validation in under two minutes.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">Manifest Guide</div>
+        <div class="doc-card-title">Target Manifest Field Reference</div>
+        <div class="doc-card-desc">Complete reference for every field in the target manifest — name, version, entrypoints, schemas, threat model, and test vectors.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">CLI Reference</div>
+        <div class="doc-card-title">All Commands &amp; Flags</div>
+        <div class="doc-card-desc">Full CLI reference — <code style="font-family:var(--mono);font-size:11px;">validate</code>, <code style="font-family:var(--mono);font-size:11px;">prove-wallet</code>, all flags, output formats, and exit codes.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">Networks</div>
+        <div class="doc-card-title">Pharos Network Configuration</div>
+        <div class="doc-card-desc">Chain IDs, RPC endpoints, explorer URLs, and how to add custom networks to the network config.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">Wallet Proof</div>
+        <div class="doc-card-title">Prove Live Execution</div>
+        <div class="doc-card-desc">Step-by-step guide to signing and broadcasting a zero-value proof transaction on testnet and mainnet.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+      <a class="doc-card" href="#">
+        <div class="doc-card-tag">Extending</div>
+        <div class="doc-card-title">Add Custom Checks</div>
+        <div class="doc-card-desc">How to add new validation checks to the engine, write tests for them, and integrate CallQuarry into your own agent pipeline.</div>
+        <div class="doc-card-arrow">→</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="cta-inner scroll-reveal">
+    <p class="section-eyebrow">Get Started</p>
+    <h2 class="cta-title">CallQuarry <em>rewrites</em><br>what ready means.</h2>
+    <p class="cta-sub">Stop guessing whether your Skill will pass. Validate it before the judge sees it.</p>
+    <div class="cta-actions">
+      <a class="btn-yellow" href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">View on GitHub</a>
+      <a class="btn-ghost" href="#cli">Read the Docs</a>
+    </div>
+    <div style="margin-top:48px; font-family:var(--mono); font-size:11px; color:rgba(255,255,255,0.3); letter-spacing:0.06em;">
+      Proven transactions:
+      <span style="color:rgba(255,255,255,0.5);">Atlantic testnet · 0x18dd2d9d...</span>
+      &nbsp;·&nbsp;
+      <span style="color:rgba(255,255,255,0.5);">Mainnet · 0x1178a4b4...</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="nav-logo" href="#">
+          <span class="logo-mark">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 4L28 16L16 28L4 16Z" stroke="#E8C840" stroke-width="1.5" fill="none"/>
+              <rect x="10" y="10" width="12" height="12" stroke="#E8C840" stroke-width="1" fill="none" stroke-dasharray="2 2"/>
+              <circle cx="16" cy="16" r="2" fill="#E8C840"/>
+              <line x1="16" y1="4" x2="16" y2="7" stroke="#E8C840" stroke-width="1.5"/>
+              <line x1="28" y1="16" x2="25" y2="16" stroke="#E8C840" stroke-width="1.5"/>
+            </svg>
+          </span>
+          CallQuarry
+        </a>
+        <p class="footer-tagline">Reusable multi-skill validation harness for Pharos Agent Carnival submissions.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Product</div>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#scoring">Scoring</a></li>
+          <li><a href="#cli">CLI Reference</a></li>
+          <li><a href="#networks">Networks</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Docs</div>
+        <ul>
+          <li><a href="#docs">Getting Started</a></li>
+          <li><a href="#manifest">Manifest Guide</a></li>
+          <li><a href="#docs">Wallet Proof</a></li>
+          <li><a href="#docs">Extending</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Links</div>
+        <ul>
+          <li><a href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://pharosscan.xyz" target="_blank" rel="noopener">Pharosscan</a></li>
+          <li><a href="https://rpc.pharos.xyz" target="_blank" rel="noopener">Pharos RPC</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 CallQuarry. Built on Pharos.</span>
+      <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="https://github.com/comzzy-comzzy/callquarry" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const NETWORKS = {
+    'pharos-mainnet': {
+      id: 'pharos-mainnet',
+      name: 'Pharos Pacific Ocean Mainnet',
+      environment: 'mainnet',
+      chainId: 1672,
+      chainIdHex: '0x688',
+      rpcUrl: 'https://rpc.pharos.xyz',
+      explorerUrl: 'https://pharosscan.xyz',
+      nativeCurrency: { name: 'PROS', symbol: 'PROS', decimals: 18 }
+    },
+    'pharos-atlantic-testnet': {
+      id: 'pharos-atlantic-testnet',
+      name: 'Pharos Atlantic Testnet',
+      environment: 'testnet',
+      chainId: 688689,
+      chainIdHex: '0xa8231',
+      rpcUrl: 'https://atlantic.dplabs-internal.com',
+      explorerUrl: 'https://atlantic.pharosscan.xyz',
+      nativeCurrency: { name: 'PHRS', symbol: 'PHRS', decimals: 18 }
+    }
+  };
+
+  const DEFAULT_NETWORK_IDS = ['pharos-mainnet', 'pharos-atlantic-testnet'];
+  const EXAMPLE_MANIFEST = {
+    name: 'pharos-native-balance-skill',
+    version: '0.1.0',
+    description: 'Reusable read-only Skill that fetches the native balance for an address on Pharos mainnet or Atlantic testnet.',
+    networks: ['pharos-mainnet', 'pharos-atlantic-testnet'],
+    prompts: [
+      'Fetch the native token balance for this address and return the raw wei value plus a decimal string.'
+    ],
+    entrypoints: [
+      {
+        id: 'getNativeBalance',
+        type: 'read',
+        description: 'Fetch native PROS or PHRS balance for a checksummed or lowercase EVM address.',
+        inputSchema: {
+          type: 'object',
+          required: ['address'],
+          additionalProperties: false,
+          properties: {
+            address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+            blockTag: { type: 'string', enum: ['latest', 'safe', 'finalized', 'pending', 'earliest'] }
+          }
+        },
+        outputSchema: {
+          type: 'object',
+          required: ['address', 'wei', 'network'],
+          additionalProperties: false,
+          properties: {
+            address: { type: 'string' },
+            wei: { type: 'string' },
+            network: { type: 'string' }
+          }
+        },
+        readCalls: [
+          {
+            id: 'balance-of-zero-address',
+            method: 'eth_getBalance',
+            params: ['0x0000000000000000000000000000000000000000', 'latest']
+          }
+        ],
+        testVectors: [
+          {
+            id: 'zero-address-latest',
+            input: {
+              address: '0x0000000000000000000000000000000000000000',
+              blockTag: 'latest'
+            }
+          }
+        ],
+        failureModes: ['RPC endpoint unavailable', 'Invalid EVM address', 'Unsupported block tag']
+      }
+    ],
+    threatModel: { permissions: ['rpc-read'], writes: false, secrets: [] }
+  };
+
+  const ALLOWED_ENTRYPOINT_TYPES = new Set(['read', 'write', 'transaction', 'payment', 'oracle', 'tool', 'prompt', 'workflow']);
+  const PROMPT_RISK_PATTERNS = [
+    { id: 'prompt.ignore-previous', severity: 'fail', pattern: /ignore\s+(all\s+)?(previous|prior|above|system)\s+instructions/i, message: 'Prompt text contains an instruction-override phrase.' },
+    { id: 'prompt.reveal-secrets', severity: 'fail', pattern: /reveal\s+(your\s+)?(private\s+key|seed\s+phrase|mnemonic|secret|api\s*key|token)/i, message: 'Prompt text asks for secret disclosure.' },
+    { id: 'prompt.disable-safety', severity: 'warn', pattern: /disable\s+(safety|guardrails|validation|checks|filters)/i, message: 'Prompt text asks to disable safety or validation behavior.' },
+    { id: 'prompt.jailbreak', severity: 'warn', pattern: /(jailbreak|developer\s+mode|do\s+anything\s+now)/i, message: 'Prompt text contains common jailbreak wording.' },
+    { id: 'prompt.hidden-output', severity: 'warn', pattern: /do\s+not\s+(tell|show|reveal)\s+(the\s+)?user/i, message: 'Prompt text may hide behavior from the user.' }
+  ];
+
+  let currentReport = null;
+  let connectedAccount = null;
+
+  function isObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function makeReport(name = 'browser-workbench') {
+    return {
+      callquarryVersion: '0.2.0-browser',
+      generatedAt: new Date().toISOString(),
+      target: { name },
+      summary: { score: 100, status: 'ready', totalChecks: 0, passed: 0, warnings: 0, failed: 0, skipped: 0 },
+      checks: []
+    };
+  }
+
+  function addCheck(report, status, category, id, title, detail, evidence = {}) {
+    report.checks.push({ status, category, id, title, detail, evidence });
+  }
+
+  function finalizeReport(report) {
+    const counts = { pass: 0, warn: 0, fail: 0, skip: 0 };
+    report.checks.forEach((check) => { counts[check.status] += 1; });
+    report.summary = {
+      score: Math.max(0, 100 - counts.fail * 18 - counts.warn * 6 - counts.skip * 2),
+      status: counts.fail > 0 ? 'blocked' : counts.warn > 0 ? 'needs-review' : 'ready',
+      totalChecks: report.checks.length,
+      passed: counts.pass,
+      warnings: counts.warn,
+      failed: counts.fail,
+      skipped: counts.skip
+    };
+    return report;
+  }
+
+  function collectStrings(value, path = '$', out = []) {
+    if (typeof value === 'string') {
+      out.push({ path, value });
+    } else if (Array.isArray(value)) {
+      value.forEach((item, index) => collectStrings(item, `${path}[${index}]`, out));
+    } else if (isObject(value)) {
+      Object.entries(value).forEach(([key, nested]) => collectStrings(nested, `${path}.${key}`, out));
+    }
+    return out;
+  }
+
+  function matchesType(value, type) {
+    if (type === 'object') return isObject(value);
+    if (type === 'array') return Array.isArray(value);
+    if (type === 'integer') return Number.isInteger(value);
+    if (type === 'null') return value === null;
+    return typeof value === type;
+  }
+
+  function validateJsonSchemaValue(value, schema, path = '$') {
+    const errors = [];
+    if (!isObject(schema)) return [`${path}: schema must be an object`];
+    if (schema.type && !matchesType(value, schema.type)) {
+      errors.push(`${path}: expected type ${schema.type}, got ${Array.isArray(value) ? 'array' : typeof value}`);
+      return errors;
+    }
+    if (Array.isArray(schema.enum) && !schema.enum.includes(value)) {
+      errors.push(`${path}: value must be one of ${schema.enum.join(', ')}`);
+    }
+    if (typeof value === 'string') {
+      if (typeof schema.minLength === 'number' && value.length < schema.minLength) errors.push(`${path}: string shorter than minLength ${schema.minLength}`);
+      if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) errors.push(`${path}: string longer than maxLength ${schema.maxLength}`);
+      if (typeof schema.pattern === 'string' && !(new RegExp(schema.pattern)).test(value)) errors.push(`${path}: string does not match pattern ${schema.pattern}`);
+    }
+    if (typeof value === 'number') {
+      if (typeof schema.minimum === 'number' && value < schema.minimum) errors.push(`${path}: number below minimum ${schema.minimum}`);
+      if (typeof schema.maximum === 'number' && value > schema.maximum) errors.push(`${path}: number above maximum ${schema.maximum}`);
+    }
+    if (schema.type === 'object' && isObject(value)) {
+      const required = Array.isArray(schema.required) ? schema.required : [];
+      required.forEach((key) => {
+        if (!(key in value)) errors.push(`${path}.${key}: required property missing`);
+      });
+      const properties = isObject(schema.properties) ? schema.properties : {};
+      Object.entries(value).forEach(([key, propertyValue]) => {
+        if (properties[key]) errors.push(...validateJsonSchemaValue(propertyValue, properties[key], `${path}.${key}`));
+        else if (schema.additionalProperties === false) errors.push(`${path}.${key}: additional property not allowed`);
+      });
+    }
+    if (schema.type === 'array' && Array.isArray(value) && schema.items) {
+      value.forEach((item, index) => errors.push(...validateJsonSchemaValue(item, schema.items, `${path}[${index}]`)));
+    }
+    return errors;
+  }
+
+  function validateManifestShape(manifest) {
+    const report = makeReport(manifest?.name ?? 'unknown');
+    if (!isObject(manifest)) {
+      addCheck(report, 'fail', 'manifest', 'manifest.root', 'Manifest must be an object', 'The target manifest JSON root must be an object.');
+      return finalizeReport(report);
+    }
+
+    report.target.name = manifest.name ?? 'unknown';
+    report.target.version = manifest.version;
+
+    const nameValid = typeof manifest.name === 'string' && /^[a-z][a-z0-9-]{2,63}$/.test(manifest.name);
+    addCheck(report, nameValid ? 'pass' : 'fail', 'manifest', 'manifest.name-format', 'Skill name format', nameValid ? 'Skill name uses portable lowercase hyphen-case.' : 'Skill name must use lowercase letters, numbers, and hyphens, starting with a letter.');
+
+    const versionValid = typeof manifest.version === 'string' && /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/.test(manifest.version);
+    addCheck(report, versionValid ? 'pass' : 'warn', 'manifest', 'manifest.semver', 'Semantic version', versionValid ? 'Version looks like semantic versioning.' : 'Use a semantic version such as 0.1.0.');
+
+    const descriptionValid = typeof manifest.description === 'string' && manifest.description.trim().length >= 40;
+    addCheck(report, descriptionValid ? 'pass' : 'fail', 'manifest', 'manifest.description', 'Description present', descriptionValid ? 'Description is specific enough.' : 'Description must be at least 40 characters.');
+
+    if (!Array.isArray(manifest.networks) || manifest.networks.length === 0) {
+      addCheck(report, 'fail', 'manifest', 'manifest.networks', 'Networks required', 'Declare the Pharos networks this Skill supports.');
+    } else {
+      addCheck(report, 'pass', 'manifest', 'manifest.networks', 'Networks declared', 'Target Skill declares network support.', { networks: manifest.networks });
+      DEFAULT_NETWORK_IDS.forEach((networkId) => {
+        const hasNetwork = manifest.networks.includes(networkId);
+        addCheck(report, hasNetwork ? 'pass' : 'warn', 'manifest', `manifest.network.${networkId}`, `${networkId} support`, hasNetwork ? `Manifest declares ${networkId}.` : `Hackathon-ready Pharos Skills should declare ${networkId}.`);
+      });
+    }
+
+    validateEntrypoints(manifest.entrypoints, report);
+    validateThreatModel(manifest.threatModel, report);
+    scanPromptRisks(manifest, report);
+    validateTestVectors(manifest.entrypoints, report);
+    return finalizeReport(report);
+  }
+
+  function validateEntrypoints(entrypoints, report) {
+    if (!Array.isArray(entrypoints) || entrypoints.length === 0) {
+      addCheck(report, 'fail', 'entrypoint', 'entrypoints.present', 'At least one entrypoint required', 'Reusable Skills must expose at least one callable entrypoint.');
+      return;
+    }
+    addCheck(report, 'pass', 'entrypoint', 'entrypoints.present', 'Entrypoints present', `${entrypoints.length} entrypoint(s) declared.`);
+    const seenIds = new Set();
+    entrypoints.forEach((entrypoint, index) => {
+      const prefix = `entrypoints.${index}`;
+      const id = entrypoint?.id ?? `index-${index}`;
+      const idValid = typeof entrypoint?.id === 'string' && /^[a-z][a-zA-Z0-9_-]{2,63}$/.test(entrypoint.id);
+      addCheck(report, idValid ? 'pass' : 'fail', 'entrypoint', `${prefix}.id`, `Entrypoint ${id} id`, idValid ? 'Entrypoint id is portable.' : 'Entrypoint id must start with a lowercase letter.');
+      if (seenIds.has(entrypoint?.id)) addCheck(report, 'fail', 'entrypoint', `${prefix}.unique-id`, `Entrypoint ${id} duplicate`, 'Entrypoint ids must be unique.');
+      else if (entrypoint?.id) {
+        seenIds.add(entrypoint.id);
+        addCheck(report, 'pass', 'entrypoint', `${prefix}.unique-id`, `Entrypoint ${id} unique`, 'Entrypoint id is unique.');
+      }
+      const typeValid = typeof entrypoint?.type === 'string' && ALLOWED_ENTRYPOINT_TYPES.has(entrypoint.type);
+      addCheck(report, typeValid ? 'pass' : 'fail', 'entrypoint', `${prefix}.type`, `Entrypoint ${id} type`, typeValid ? `Entrypoint type ${entrypoint.type} is supported.` : 'Entrypoint type is unsupported.');
+      const inputSchemaValid = isObject(entrypoint?.inputSchema) && typeof entrypoint.inputSchema.type === 'string';
+      addCheck(report, inputSchemaValid ? 'pass' : 'fail', 'entrypoint', `${prefix}.inputSchema`, `Entrypoint ${id} input schema`, inputSchemaValid ? 'Input schema is present.' : 'inputSchema must be a JSON Schema object with a type.');
+      const outputSchemaValid = isObject(entrypoint?.outputSchema) && typeof entrypoint.outputSchema.type === 'string';
+      addCheck(report, outputSchemaValid ? 'pass' : 'fail', 'entrypoint', `${prefix}.outputSchema`, `Entrypoint ${id} output schema`, outputSchemaValid ? 'Output schema is present.' : 'outputSchema must be a JSON Schema object with a type.');
+      const failureModes = Array.isArray(entrypoint?.failureModes) ? entrypoint.failureModes : [];
+      addCheck(report, failureModes.length > 0 ? 'pass' : 'warn', 'entrypoint', `${prefix}.failureModes`, `Entrypoint ${id} failure modes`, failureModes.length > 0 ? 'Failure modes are documented.' : 'Document expected failure modes for better downstream agent handling.');
+    });
+  }
+
+  function validateThreatModel(threatModel, report) {
+    if (!isObject(threatModel)) {
+      addCheck(report, 'fail', 'security', 'threatModel.present', 'Threat model required', 'Declare permissions, write behavior, and secret requirements.');
+      return;
+    }
+    addCheck(report, 'pass', 'security', 'threatModel.present', 'Threat model present', 'Threat model is declared.');
+    addCheck(report, Array.isArray(threatModel.permissions) ? 'pass' : 'fail', 'security', 'threatModel.permissions', 'Permissions declared', Array.isArray(threatModel.permissions) ? 'Permissions are listed.' : 'threatModel.permissions must be an array.');
+    addCheck(report, typeof threatModel.writes === 'boolean' ? 'pass' : 'fail', 'security', 'threatModel.writes', 'Write behavior declared', typeof threatModel.writes === 'boolean' ? `writes is ${threatModel.writes}.` : 'threatModel.writes must be a boolean.');
+    addCheck(report, Array.isArray(threatModel.secrets) ? 'pass' : 'fail', 'security', 'threatModel.secrets', 'Secrets declared', Array.isArray(threatModel.secrets) ? 'Secret requirements are listed.' : 'threatModel.secrets must be an array.');
+  }
+
+  function scanPromptRisks(manifest, report) {
+    let findings = 0;
+    collectStrings(manifest).forEach((item) => {
+      PROMPT_RISK_PATTERNS.forEach((risk) => {
+        if (risk.pattern.test(item.value)) {
+          findings += 1;
+          addCheck(report, risk.severity, 'prompt', risk.id, 'Prompt risk detected', risk.message, { path: item.path });
+        }
+      });
+    });
+    if (findings === 0) addCheck(report, 'pass', 'prompt', 'prompt.scan', 'Prompt scan clean', 'No common instruction-override or secret-exfiltration phrases found.');
+  }
+
+  function validateTestVectors(entrypoints, report) {
+    if (!Array.isArray(entrypoints)) return;
+    let vectorCount = 0;
+    entrypoints.forEach((entrypoint) => {
+      if (!Array.isArray(entrypoint?.testVectors)) return;
+      entrypoint.testVectors.forEach((vector) => {
+        vectorCount += 1;
+        const vectorId = vector?.id ?? `vector-${vectorCount}`;
+        const errors = validateJsonSchemaValue(vector?.input, entrypoint.inputSchema, '$');
+        addCheck(report, errors.length === 0 ? 'pass' : 'fail', 'test-vector', `testVector.${entrypoint.id}.${vectorId}`, `Test vector ${vectorId}`, errors.length === 0 ? 'Sample input matches inputSchema.' : 'Sample input does not match inputSchema.', errors.length === 0 ? {} : { errors });
+      });
+    });
+    if (vectorCount === 0) addCheck(report, 'warn', 'test-vector', 'testVector.present', 'No test vectors found', 'Add testVectors so CallQuarry can validate real sample inputs.');
+  }
+
+  async function rpcRequest(network, method, params = []) {
+    const response = await fetch(network.rpcUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    return data.result;
+  }
+
+  async function runLiveValidation() {
+    const manifest = parseManifestInput();
+    const report = validateManifestShape(manifest);
+    for (const networkId of DEFAULT_NETWORK_IDS) {
+      const network = NETWORKS[networkId];
+      try {
+        const chainIdHex = await rpcRequest(network, 'eth_chainId');
+        const chainId = Number.parseInt(chainIdHex, 16);
+        addCheck(report, chainId === network.chainId ? 'pass' : 'fail', 'network', `network.${network.id}.chainId`, `${network.name} chain ID`, chainId === network.chainId ? `RPC returned expected chain ID ${network.chainId}.` : `RPC returned chain ID ${chainId}, expected ${network.chainId}.`, { chainIdHex });
+        const blockNumberHex = await rpcRequest(network, 'eth_blockNumber');
+        addCheck(report, 'pass', 'network', `network.${network.id}.blockNumber`, `${network.name} block height`, `RPC returned block ${Number.parseInt(blockNumberHex, 16)}.`, { blockNumberHex });
+        const gasPriceHex = await rpcRequest(network, 'eth_gasPrice');
+        addCheck(report, 'pass', 'network', `network.${network.id}.gasPrice`, `${network.name} gas price`, 'RPC returned gas price.', { gasPriceHex });
+      } catch (error) {
+        addCheck(report, 'fail', 'network', `network.${network.id}.rpc`, `${network.name} RPC`, error.message);
+      }
+      for (const entrypoint of manifest.entrypoints ?? []) {
+        for (const call of entrypoint.readCalls ?? []) {
+          try {
+            const result = await rpcRequest(network, call.method, call.params ?? []);
+            addCheck(report, 'pass', 'rpc-read', `read.${network.id}.${call.id ?? call.method}`, `${network.name} ${call.id ?? call.method}`, `${call.method} returned successfully.`, { resultPreview: previewValue(result) });
+          } catch (error) {
+            addCheck(report, 'fail', 'rpc-read', `read.${network.id}.${call.id ?? call.method}`, `${network.name} ${call.id ?? call.method}`, `${call.method} failed: ${error.message}`);
+          }
+        }
+      }
+    }
+    renderReport(finalizeReport(report));
+  }
+
+  function previewValue(value) {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    return serialized.length > 120 ? `${serialized.slice(0, 117)}...` : serialized;
+  }
+
+  function parseManifestInput() {
+    const value = document.getElementById('manifestInput').value;
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      const report = makeReport('invalid-json');
+      addCheck(report, 'fail', 'manifest', 'manifest.json', 'Manifest JSON parse failed', error.message);
+      renderReport(finalizeReport(report));
+      throw error;
+    }
+  }
+
+  function renderReport(report) {
+    currentReport = report;
+    document.getElementById('scoreValue').textContent = report.summary.score;
+    document.getElementById('passValue').textContent = report.summary.passed;
+    document.getElementById('warnValue').textContent = report.summary.warnings;
+    document.getElementById('failValue').textContent = report.summary.failed;
+    document.getElementById('downloadReportBtn').disabled = false;
+
+    const pill = document.getElementById('statusPill');
+    pill.textContent = report.summary.status;
+    pill.className = `status-pill ${report.summary.status === 'ready' ? 'ready' : report.summary.status === 'blocked' ? 'blocked' : 'review'}`;
+
+    const list = document.getElementById('reportList');
+    list.innerHTML = report.checks.map((check) => `
+      <div class="report-item">
+        <div class="report-tag ${check.status}">${check.status}</div>
+        <div>
+          <div class="report-title">${escapeHtml(check.title)}</div>
+          <div class="report-detail">${escapeHtml(check.detail)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+  }
+
+  function downloadReport() {
+    if (!currentReport) return;
+    const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `callquarry-report-${Date.now()}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function getEthereum() {
+    return window.ethereum;
+  }
+
+  async function connectWallet() {
+    const ethereum = getEthereum();
+    if (!ethereum) {
+      setWalletStatus('No injected wallet found. Install MetaMask, Rabby, or another EVM wallet.');
+      return;
+    }
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    connectedAccount = accounts[0];
+    setWalletStatus(`Connected: ${connectedAccount}`);
+    document.getElementById('dryWalletBtn').disabled = false;
+    document.getElementById('broadcastWalletBtn').disabled = false;
+  }
+
+  function setWalletStatus(message) {
+    document.getElementById('walletStatus').textContent = message;
+  }
+
+  async function ensureWalletNetwork(network) {
+    const ethereum = getEthereum();
+    const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+    if (currentChainId.toLowerCase() === network.chainIdHex.toLowerCase()) return;
+    try {
+      await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: network.chainIdHex }] });
+    } catch (error) {
+      if (error.code !== 4902) throw error;
+      await ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: network.chainIdHex,
+          chainName: network.name,
+          nativeCurrency: network.nativeCurrency,
+          rpcUrls: [network.rpcUrl],
+          blockExplorerUrls: [network.explorerUrl]
+        }]
+      });
+    }
+  }
+
+  async function runWalletProof({ broadcast }) {
+    const ethereum = getEthereum();
+    const report = makeReport('browser-wallet-proof');
+    if (!ethereum) {
+      addCheck(report, 'fail', 'wallet-proof', 'wallet.injected', 'Injected wallet required', 'Install MetaMask, Rabby, or another EVM wallet.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+    if (!connectedAccount) await connectWallet();
+    if (!connectedAccount) return;
+
+    const networkId = document.getElementById('walletNetwork').value;
+    const network = NETWORKS[networkId];
+    const allowMainnet = document.getElementById('allowMainnetCheck').checked;
+    const gasConsent = document.getElementById('gasConsentCheck').checked;
+    report.target.network = network.id;
+    report.target.address = connectedAccount;
+    addCheck(report, 'pass', 'wallet-proof', 'wallet.network.selected', 'Proof network selected', `Selected ${network.name}.`, { network: network.id });
+    if (network.environment === 'mainnet' && !allowMainnet) {
+      addCheck(report, 'fail', 'wallet-proof', 'wallet.mainnet.guard', 'Mainnet guard active', 'Enable the allow mainnet checkbox before using mainnet wallet proof.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+    addCheck(report, 'pass', 'wallet-proof', 'wallet.mainnet.guard', 'Mainnet guard checked', network.environment === 'mainnet' ? 'Mainnet proof explicitly allowed.' : 'Network is not mainnet.');
+    if (broadcast && !gasConsent) {
+      addCheck(report, 'fail', 'wallet-proof', 'wallet.consent', 'Broadcast consent required', 'Enable the gas consent checkbox before broadcasting.');
+      renderReport(finalizeReport(report));
+      return;
+    }
+
+    try {
+      await ensureWalletNetwork(network);
+      const balanceHex = await ethereum.request({ method: 'eth_getBalance', params: [connectedAccount, 'latest'] });
+      addCheck(report, 'pass', 'wallet-proof', 'wallet.balance', 'Wallet balance read', 'Wallet balance was read before proof transaction.', { balanceHex });
+      const tx = { from: connectedAccount, to: connectedAccount, value: '0x0', data: '0x' };
+      const gasHex = await ethereum.request({ method: 'eth_estimateGas', params: [tx] });
+      addCheck(report, 'pass', 'wallet-proof', 'wallet.gasEstimate', 'Gas estimate', 'Transaction gas was estimated successfully.', { gasHex });
+      if (!broadcast) {
+        addCheck(report, 'skip', 'wallet-proof', 'wallet.broadcast', 'Transaction broadcast skipped', 'Dry browser proof does not request a signature or send a transaction.');
+        renderReport(finalizeReport(report));
+        return;
+      }
+      const transactionHash = await ethereum.request({ method: 'eth_sendTransaction', params: [tx] });
+      addCheck(report, 'pass', 'wallet-proof', 'wallet.broadcast', 'Transaction broadcast', 'Wallet broadcasted the zero-value proof transaction.', { transactionHash, explorerUrl: `${network.explorerUrl}/tx/${transactionHash}` });
+      renderReport(finalizeReport(report));
+    } catch (error) {
+      addCheck(report, 'fail', 'wallet-proof', 'wallet.execution', 'Wallet proof execution', error.message ?? String(error));
+      renderReport(finalizeReport(report));
+    }
+  }
+
+  function initWorkbench() {
+    const manifestInput = document.getElementById('manifestInput');
+    if (!manifestInput) return;
+    manifestInput.value = JSON.stringify(EXAMPLE_MANIFEST, null, 2);
+    document.getElementById('loadExampleBtn').addEventListener('click', () => {
+      manifestInput.value = JSON.stringify(EXAMPLE_MANIFEST, null, 2);
+    });
+    document.getElementById('offlineValidateBtn').addEventListener('click', () => {
+      try {
+        renderReport(validateManifestShape(parseManifestInput()));
+      } catch {}
+    });
+    document.getElementById('liveValidateBtn').addEventListener('click', async () => {
+      document.getElementById('liveValidateBtn').disabled = true;
+      try {
+        await runLiveValidation();
+      } catch {}
+      document.getElementById('liveValidateBtn').disabled = false;
+    });
+    document.getElementById('downloadReportBtn').addEventListener('click', downloadReport);
+    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+    document.getElementById('dryWalletBtn').addEventListener('click', () => runWalletProof({ broadcast: false }));
+    document.getElementById('broadcastWalletBtn').addEventListener('click', () => runWalletProof({ broadcast: true }));
+  }
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.scroll-reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 60);
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(el => io.observe(el));
+
+  // Animated hero stats counter
+  function animateCount(el, target, suffix = '') {
+    let start = 0;
+    const duration = 1200;
+    const step = (timestamp) => {
+      if (!start) start = timestamp;
+      const progress = Math.min((timestamp - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.floor(eased * target) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  const statNums = document.querySelectorAll('.stat-num');
+  const statsValues = [8, 100, 0, 2];
+  const statsIO = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        statNums.forEach((el, i) => animateCount(el, statsValues[i]));
+        statsIO.disconnect();
+      }
+    });
+  }, { threshold: 0.5 });
+  if (statNums.length) statsIO.observe(statNums[0]);
+
+  // Ripple animation restart on scroll into view
+  const rippleRings = document.querySelectorAll('.ripple-ring');
+  const rippleIO = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      rippleRings.forEach(r => {
+        r.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused';
+      });
+    });
+  }, { threshold: 0.3 });
+  const scoreSection = document.getElementById('scoring');
+  if (scoreSection) rippleIO.observe(scoreSection);
+
+  initWorkbench();
+</script>
+</body>
+</html>

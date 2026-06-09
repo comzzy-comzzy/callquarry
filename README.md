@@ -55,6 +55,34 @@ cd callquarry
 npm install
 ```
 
+## Website Workbench
+
+CallQuarry includes a browser workbench in `index.html`.
+
+Run it locally:
+
+```bash
+npm run site
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/
+```
+
+The website can:
+
+- Load the example Skill manifest
+- Run offline manifest validation in the browser
+- Run live Pharos mainnet/testnet RPC checks from the browser
+- Export a JSON report
+- Connect an injected EVM wallet such as MetaMask or Rabby
+- Run wallet dry proof without spending gas
+- Broadcast a zero-value wallet proof transaction when you explicitly approve it
+
+The website never asks for a private key. Wallet proof uses your browser wallet.
+
 ## Step 1: Run Local Tests
 
 This confirms the package works on your machine.
