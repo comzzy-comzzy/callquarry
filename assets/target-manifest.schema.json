@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://callquarry.dev/schemas/target-manifest.schema.json",
+  "title": "CallQuarry Target Skill Manifest",
+  "type": "object",
+  "required": ["name", "version", "description", "networks", "entrypoints", "threatModel"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 40
+    },
+    "networks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "prompts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "entrypoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "description", "inputSchema", "outputSchema"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-zA-Z0-9_-]{2,63}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["read", "write", "transaction", "payment", "oracle", "tool", "prompt", "workflow"]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 30
+          },
+          "inputSchema": {
+            "type": "object"
+          },
+          "outputSchema": {
+            "type": "object"
+          },
+          "readCalls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "method", "params"]
+            }
+          },
+          "transactionSimulations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "from", "to"]
+            }
+          },
+          "testVectors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "input"]
+            }
+          }
+        }
+      }
+    },
+    "threatModel": {
+      "type": "object",
+      "required": ["permissions", "writes", "secrets"],
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "writes": {
+          "type": "boolean"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

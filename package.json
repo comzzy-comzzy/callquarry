@@ -1,0 +1,18 @@
+{
+  "name": "callquarry",
+  "version": "0.1.0",
+  "description": "Multi-skill validation harness for Pharos agent Skills.",
+  "type": "module",
+  "bin": {
+    "callquarry": "./scripts/callquarry.mjs"
+  },
+  "scripts": {
+    "validate": "node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --offline",
+    "validate:live": "node scripts/callquarry.mjs validate --manifest examples/pharos-balance-target.json --networks pharos-mainnet,pharos-atlantic-testnet",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

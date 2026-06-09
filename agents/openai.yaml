@@ -1,0 +1,4 @@
+interface:
+  display_name: "CallQuarry"
+  short_description: "Stress-test Pharos agent Skills"
+  default_prompt: "Use $callquarry to validate a Pharos Skill before submitting it."

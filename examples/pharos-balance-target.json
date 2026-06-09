@@ -1,0 +1,73 @@
+{
+  "name": "pharos-native-balance-skill",
+  "version": "0.1.0",
+  "description": "Reusable read-only Skill that fetches the native balance for an address on Pharos mainnet or Atlantic testnet.",
+  "networks": ["pharos-mainnet", "pharos-atlantic-testnet"],
+  "prompts": [
+    "Fetch the native token balance for this address and return the raw wei value plus a decimal string."
+  ],
+  "entrypoints": [
+    {
+      "id": "getNativeBalance",
+      "type": "read",
+      "description": "Fetch native PROS or PHRS balance for a checksummed or lowercase EVM address.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["address"],
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "blockTag": {
+            "type": "string",
+            "enum": ["latest", "safe", "finalized", "pending", "earliest"]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["address", "wei", "network"],
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "wei": {
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          }
+        }
+      },
+      "readCalls": [
+        {
+          "id": "balance-of-zero-address",
+          "method": "eth_getBalance",
+          "params": ["0x0000000000000000000000000000000000000000", "latest"]
+        }
+      ],
+      "testVectors": [
+        {
+          "id": "zero-address-latest",
+          "input": {
+            "address": "0x0000000000000000000000000000000000000000",
+            "blockTag": "latest"
+          }
+        }
+      ],
+      "failureModes": [
+        "RPC endpoint unavailable",
+        "Invalid EVM address",
+        "Unsupported block tag"
+      ]
+    }
+  ],
+  "threatModel": {
+    "permissions": ["rpc-read"],
+    "writes": false,
+    "secrets": []
+  }
+}

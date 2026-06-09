@@ -1,0 +1,52 @@
+{
+  "networks": [
+    {
+      "id": "pharos-mainnet",
+      "name": "Pharos Pacific Ocean Mainnet",
+      "environment": "mainnet",
+      "chainId": 1672,
+      "chainIdHex": "0x688",
+      "rpcUrl": "https://rpc.pharos.xyz",
+      "explorerUrl": "https://pharosscan.xyz",
+      "nativeCurrency": {
+        "name": "PROS",
+        "symbol": "PROS",
+        "decimals": 18
+      },
+      "source": "https://pharosscan.xyz"
+    },
+    {
+      "id": "pharos-atlantic-testnet",
+      "name": "Pharos Atlantic Testnet",
+      "environment": "testnet",
+      "chainId": 688689,
+      "chainIdHex": "0xa8231",
+      "rpcUrl": "https://atlantic.dplabs-internal.com",
+      "wssUrl": "wss://atlantic.dplabs-internal.com",
+      "explorerUrl": "https://atlantic.pharosscan.xyz",
+      "nativeCurrency": {
+        "name": "PHRS",
+        "symbol": "PHRS",
+        "decimals": 18
+      },
+      "rateLimit": "500 requests per 5 minutes",
+      "source": "https://docs.pharosnetwork.xyz/network-overview/pharos-networks"
+    },
+    {
+      "id": "pharos-legacy-testnet",
+      "name": "Pharos Legacy Testnet",
+      "environment": "testnet",
+      "chainId": 688688,
+      "chainIdHex": "0xa8230",
+      "rpcUrl": "https://testnet.dplabs-internal.com",
+      "explorerUrl": "https://testnet.pharosscan.xyz",
+      "nativeCurrency": {
+        "name": "PHRS",
+        "symbol": "PHRS",
+        "decimals": 18
+      },
+      "source": "https://docs.pharosnetwork.xyz/developer-guide/hardhat/write-your-first-nft"
+    }
+  ],
+  "defaults": ["pharos-mainnet", "pharos-atlantic-testnet"]
+}
