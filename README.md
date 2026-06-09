@@ -71,19 +71,33 @@ Then open:
 http://127.0.0.1:4173/
 ```
 
-Run it on the VPS so other devices can open it with the VPS IP:
-
-```bash
-python3 -m http.server 4173 --bind 0.0.0.0
-```
-
-Then open:
+Public VPS demo:
 
 ```text
 http://161.97.107.130:4173/
 ```
 
-Use `127.0.0.1` only when you are browsing from the same machine that is running the server. Use `161.97.107.130` when opening the site from your phone, laptop, or DoraHacks reviewers.
+This VPS is served by Nginx, not the temporary Python server, so it survives terminal logout and normal VPS reboot. Judges can use this URL directly.
+
+The Nginx config is tracked in this repo at `deploy/nginx-callquarry.conf`.
+
+The deployed files live here on the VPS:
+
+```text
+/var/www/callquarry/index.html
+/etc/nginx/sites-available/callquarry
+/etc/nginx/sites-enabled/callquarry
+```
+
+After editing `index.html`, publish the update to Nginx:
+
+```bash
+install -m 644 index.html /var/www/callquarry/index.html
+nginx -t
+nginx -s reload
+```
+
+Use `127.0.0.1` only when you are browsing from the same machine that is running a local dev server. Use `161.97.107.130` when opening the live site from your phone, laptop, or DoraHacks reviewers.
 
 The website can:
 
