@@ -1,18 +1,16 @@
 # CallQuarry
 
-CallQuarry is a reusable multi-skill validation harness for Pharos Agent Carnival Skill submissions.
+CallQuarry is a validation harness for Pharos Agent Carnival Skill submissions and other EVM agent tools.
 
-Use it to check whether a Skill is safe, well-structured, and compatible with Pharos mainnet and testnet. It can also run an optional wallet proof that signs and broadcasts a zero-value self-transfer.
+It checks a Skill manifest, sample inputs, prompt text, and live Pharos RPC behavior so maintainers can catch problems before wiring the Skill into an agent. Wallet proof mode is optional and can sign a zero-value self-transfer when you want an execution receipt.
 
-For Pharos hackathon review, CallQuarry supports the official Pharos Skill Engine workflow. The engine says it is required for Pharos blockchain tasks and uses Foundry `cast` / `forge` for chain access. Install the required engine first:
+For Pharos blockchain Skills, CallQuarry can run live checks through the official Pharos Skill Engine path. That path uses Foundry `cast` / `forge` for chain access. Install the engine first:
 
 ```bash
 npx skills add https://github.com/PharosNetwork/pharos-skill-engine
 ```
 
-Use the exact `npx` command above for the hackathon submission. `pnpm dlx skills add ...` and `bunx skills add ...` are alternative runners for developers who use pnpm or Bun, but they are not required here.
-
-Then run CallQuarry live checks with `--pharos-engine` to use Foundry `cast` against the Pharos networks defined by that engine. This repository includes `skills-lock.json` from that install so judges can see the official engine source that CallQuarry targets.
+Then run CallQuarry live checks with `--pharos-engine` to use Foundry `cast` against the Pharos networks defined by that engine. The checked-in `skills-lock.json` records the engine source used for compatibility testing.
 
 ## What CallQuarry Does
 
